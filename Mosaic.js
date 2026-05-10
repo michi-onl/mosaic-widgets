@@ -30,24 +30,43 @@ const CONFIG = {
   sizing: {
     small: {
       maxItems: 3,
-      fontSize: { primary: 11, secondary: 9, tertiary: 8 },
+      fontSize: { primary: 12, secondary: 10, tertiary: 9, caption: 8 },
       iconSize: 14,
       spacing: 5,
       padding: 14,
     },
     medium: {
       maxItems: 6,
-      fontSize: { primary: 12, secondary: 10, tertiary: 9 },
+      fontSize: { primary: 14, secondary: 12, tertiary: 10, caption: 9 },
       iconSize: 16,
       spacing: 8,
       padding: 16,
     },
     large: {
       maxItems: 12,
-      fontSize: { primary: 13, secondary: 11, tertiary: 10 },
+      fontSize: { primary: 16, secondary: 13, tertiary: 11, caption: 10 },
       iconSize: 18,
       spacing: 10,
       padding: 18,
+    },
+  },
+
+  // Standardized image sizes per layout template
+  images: {
+    grid: {
+      small: { width: 32, height: 32, cornerRadius: 4 },
+      medium: { width: 40, height: 40, cornerRadius: 4 },
+      large: { width: 48, height: 48, cornerRadius: 6 },
+    },
+    gridTall: {
+      small: { width: 28, height: 42, cornerRadius: 4 },
+      medium: { width: 36, height: 54, cornerRadius: 4 },
+      large: { width: 44, height: 66, cornerRadius: 6 },
+    },
+    card: {
+      small: { width: 40, height: 60, cornerRadius: 6 },
+      medium: { width: 60, height: 90, cornerRadius: 6 },
+      large: { width: 80, height: 120, cornerRadius: 8 },
     },
   },
 
@@ -892,9 +911,9 @@ class DataSource {
     }
   }
 
-  renderItemList(stack, items, sizes, useSeparators = false) {
+  renderItemList(stack, items, sizes, useSeparators = false, widgetSize = "medium") {
     items.forEach((item, index) => {
-      this.renderItem(stack, item, sizes);
+      this.renderItem(stack, item, sizes, widgetSize);
       if (index < items.length - 1) {
         stack.addSpacer(sizes.spacing);
         if (useSeparators) {
@@ -908,6 +927,29 @@ class DataSource {
         }
       }
     });
+  }
+
+  renderGrid(stack, items, sizes, widgetSize, renderCell) {
+    const columns = 2;
+    const itemsPerColumn = Math.ceil(items.length / columns);
+
+    const gridStack = stack.addStack();
+    gridStack.layoutHorizontally();
+
+    for (let col = 0; col < columns; col++) {
+      if (col > 0) gridStack.addSpacer(sizes.spacing * 2);
+
+      const columnStack = gridStack.addStack();
+      columnStack.layoutVertically();
+
+      const start = col * itemsPerColumn;
+      const end = Math.min(start + itemsPerColumn, items.length);
+
+      for (let i = start; i < end; i++) {
+        renderCell(columnStack, items[i], sizes, widgetSize);
+        if (i < end - 1) columnStack.addSpacer(sizes.spacing);
+      }
+    }
   }
 }
 
@@ -948,44 +990,26 @@ class BillboardDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    // Header
     this.addHeader(widget, data.title, sizes);
-
     widget.addSpacer(sizes.spacing);
 
-    // Content
-    const columns = this.getColumnLayout(widgetSize);
-    const itemsPerColumn = Math.ceil(data.items.length / columns);
-
     const contentStack = widget.addStack();
-    contentStack.layoutHorizontally();
-
-    for (let col = 0; col < columns; col++) {
-      if (col > 0) contentStack.addSpacer(sizes.spacing * 2);
-
-      const columnStack = contentStack.addStack();
-      columnStack.layoutVertically();
-
-      const start = col * itemsPerColumn;
-      const end = Math.min(start + itemsPerColumn, data.items.length);
-
-      for (let i = start; i < end; i++) {
-        this.renderItem(columnStack, data.items[i], sizes);
-        if (i < end - 1) columnStack.addSpacer(sizes.spacing);
-      }
-    }
+    this.renderGrid(contentStack, data.items, sizes, widgetSize, (stack, item, sz, wz) => {
+      this.renderItem(stack, item, sz, wz);
+    });
   }
 
-  renderItem(stack, item, sizes) {
+  renderItem(stack, item, sizes, widgetSize = "medium") {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
 
     // Cover image
     if (item.cover) {
+      const imgSize = CONFIG.images.gridTall[widgetSize];
       const coverImg = itemStack.addImage(item.cover);
-      coverImg.imageSize = new Size(sizes.iconSize * 2, sizes.iconSize * 2);
-      coverImg.cornerRadius = CONFIG.designTokens.cornerRadius.icon;
+      coverImg.imageSize = new Size(imgSize.width, imgSize.height);
+      coverImg.cornerRadius = imgSize.cornerRadius;
       itemStack.addSpacer(sizes.spacing);
     }
 
@@ -1027,9 +1051,6 @@ class BillboardDataSource extends DataSource {
     itemStack.addSpacer();
   }
 
-  getColumnLayout(widgetSize) {
-    return widgetSize === "small" ? 1 : widgetSize === "medium" ? 2 : 3;
-  }
 }
 
 class IMDbDataSource extends DataSource {
@@ -1085,101 +1106,51 @@ class IMDbDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    this.addHeader(widget, "Popular on IMDb", sizes);
+    this.addHeader(widget, "Popular on IMDb", sizes, { subtitle: "Movies · TV" });
     widget.addSpacer(sizes.spacing);
 
+    const allItems = [
+      ...data.movies.map(m => ({ ...m, type: "movie" })),
+      ...data.tvShows.map(t => ({ ...t, type: "tv" })),
+    ].slice(0, sizes.maxItems);
+
     const contentStack = widget.addStack();
-    contentStack.layoutHorizontally();
-
-    // Movies column
-    if (data.movies.length > 0) {
-      const moviesStack = contentStack.addStack();
-      moviesStack.layoutVertically();
-
-      this.addSectionHeader(moviesStack, "Movies", sizes);
-      this.renderItemList(moviesStack, data.movies, sizes);
-    }
-
-    if (widgetSize !== "small" && data.tvShows.length > 0) {
-      contentStack.addSpacer(null);
-
-      // TV Shows column
-      const tvStack = contentStack.addStack();
-      tvStack.layoutVertically();
-
-      this.addSectionHeader(tvStack, "TV Shows", sizes);
-      this.renderItemList(tvStack, data.tvShows, sizes);
-    }
+    this.renderGrid(contentStack, allItems, sizes, widgetSize, (stack, item, sz, wz) => {
+      this.renderItem(stack, item, sz, wz);
+    });
   }
 
-  renderItem(stack, item, sizes) {
+  renderItem(stack, item, sizes, widgetSize = "medium") {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
 
-    if (item.url) {
-      itemStack.url = item.url;
-    }
+    if (item.url) itemStack.url = item.url;
 
-    // Poster image
     if (item.poster) {
-      const posterH = sizes.iconSize * 2.4;
-      const posterW = sizes.iconSize * 1.6;
-      const posterImg = itemStack.addImage(item.poster);
-      posterImg.imageSize = new Size(posterW, posterH);
-      posterImg.cornerRadius = CONFIG.designTokens.cornerRadius.icon;
+      const imgSize = CONFIG.images.gridTall[widgetSize];
+      const coverImg = itemStack.addImage(item.poster);
+      coverImg.imageSize = new Size(imgSize.width, imgSize.height);
+      coverImg.cornerRadius = imgSize.cornerRadius;
       itemStack.addSpacer(sizes.spacing);
     }
 
-    // Text content
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleRow = textStack.addStack();
-    titleRow.layoutHorizontally();
-    titleRow.centerAlignContent();
-
-    const titleText = titleRow.addText(item.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
+    const titleText = textStack.addText(FormatUtils.truncate(item.title, 30));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
-    if (item.rating !== undefined && item.rating !== null) {
-      titleRow.addSpacer(sizes.spacing);
-      const ratingText = titleRow.addText(item.rating === "" ? "NEW" : item.rating.toString());
-      ratingText.font = Font.boldSystemFont(sizes.fontSize.tertiary);
-      ratingText.textColor = CONFIG.colors.accent;
-    }
+    const metaText = textStack.addText(item.subtitle);
+    metaText.font = Font.systemFont(sizes.fontSize.secondary);
+    metaText.textColor = CONFIG.colors.secondary;
+    metaText.lineLimit = 1;
 
-    const detailParts = [];
-    if (item.subtitle) detailParts.push(item.subtitle);
-    if (item.genre) detailParts.push(item.genre.split(",")[0]);
-    if (item.numVotes) detailParts.push(FormatUtils.formatNumber(item.numVotes) + " votes");
-    const subtitleText = textStack.addText(detailParts.join(" • "));
-    subtitleText.font = Font.systemFont(sizes.fontSize.tertiary);
-    subtitleText.textColor = CONFIG.colors.secondaryBright;
-    subtitleText.lineLimit = 1;
-  }
-
-  addSectionHeader(stack, title, sizes) {
-    const headerStack = stack.addStack();
-    headerStack.layoutHorizontally();
-    headerStack.centerAlignContent();
-
-    const iconName = title === "Movies" ? "film.fill" : "tv.fill";
-    const icon = headerStack.addImage(SFSymbol.named(iconName).image);
-    icon.imageSize = new Size(
-      sizes.fontSize.secondary,
-      sizes.fontSize.secondary,
-    );
-    icon.tintColor = CONFIG.colors.secondary;
-    headerStack.addSpacer(sizes.spacing);
-
-    const headerText = headerStack.addText(title);
-    headerText.font = Font.semiboldSystemFont(sizes.fontSize.secondary);
-    headerText.textColor = CONFIG.colors.secondary;
-
-    stack.addSpacer(sizes.spacing);
+    const badgeStack = textStack.addStack();
+    badgeStack.addSpacer(2);
+    this.addBadge(badgeStack, { text: item.rating === "" ? "NEW" : String(item.rating ?? ""), sizes });
   }
 }
 
@@ -1246,46 +1217,15 @@ class SteamDataSource extends DataSource {
     const sizes = CONFIG.sizing[widgetSize];
 
     this.addHeader(widget, "Recently Played", sizes);
-
-    // Show profile status indicators
-    if (data.profiles && data.profiles.length > 0) {
-      const statusStack = widget.addStack();
-      statusStack.layoutHorizontally();
-      statusStack.centerAlignContent();
-
-      for (const profile of data.profiles) {
-        // Avatar or fallback dot
-        if (profile.avatar) {
-          this.addCircularImage(statusStack, profile.avatar, sizes.fontSize.secondary);
-        } else {
-          const dotColor =
-            CONFIG.colors.steamStatus[profile.status] || CONFIG.colors.secondary;
-          const dot = statusStack.addText("●");
-          dot.font = Font.systemFont(sizes.fontSize.tertiary);
-          dot.textColor = dotColor;
-        }
-
-        statusStack.addSpacer(3);
-
-        const nameParts = [profile.name, profile.status];
-        if (profile.totalGames) nameParts.push(`${profile.totalGames} games`);
-        const statusText = statusStack.addText(nameParts.join(" · "));
-        statusText.font = Font.systemFont(sizes.fontSize.tertiary);
-        statusText.textColor = CONFIG.colors.secondary;
-
-        statusStack.addSpacer(sizes.spacing);
-      }
-    }
-
     widget.addSpacer(sizes.spacing);
 
     const contentStack = widget.addStack();
-    contentStack.layoutVertically();
-
-    this.renderItemList(contentStack, data.games, sizes);
+    this.renderGrid(contentStack, data.games, sizes, widgetSize, (stack, item, sz, wz) => {
+      this.renderItem(stack, item, sz, wz);
+    });
   }
 
-  renderItem(stack, game, sizes) {
+  renderItem(stack, game, sizes, widgetSize = "medium") {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
@@ -1294,16 +1234,15 @@ class SteamDataSource extends DataSource {
       itemStack.url = game.storeUrl;
     }
 
-    // Use cached game icon or fall back to SF Symbol
     if (game.icon) {
+      const imgSize = CONFIG.images.grid[widgetSize];
       const iconImg = itemStack.addImage(game.icon);
-      iconImg.imageSize = new Size(sizes.iconSize, sizes.iconSize);
-      iconImg.cornerRadius = CONFIG.designTokens.cornerRadius.icon;
+      iconImg.imageSize = new Size(imgSize.width, imgSize.height);
+      iconImg.cornerRadius = imgSize.cornerRadius;
     } else {
-      const icon = itemStack.addImage(
-        SFSymbol.named("gamecontroller.fill").image,
-      );
-      icon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
+      const imgSize = CONFIG.images.grid[widgetSize];
+      const icon = itemStack.addImage(SFSymbol.named("gamecontroller.fill").image);
+      icon.imageSize = new Size(imgSize.width, imgSize.height);
       icon.tintColor = CONFIG.colors.secondary;
     }
 
@@ -1368,52 +1307,32 @@ class HackerNewsDataSource extends DataSource {
     widget.addSpacer(sizes.spacing);
 
     const contentStack = widget.addStack();
-
     contentStack.layoutVertically();
-    this.renderItemList(contentStack, data.stories, sizes);
+    this.renderItemList(contentStack, data.stories, sizes, false, widgetSize);
   }
 
-  renderItem(stack, story, sizes) {
+  renderItem(stack, story, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
 
-    if (story.hnUrl) {
-      itemStack.url = story.hnUrl;
-    }
-
-    // Score badge with heat colors
-    const badgeColor =
-      story.points >= 500
-        ? CONFIG.colors.sunset
-        : story.points >= 150
-          ? CONFIG.colors.accent
-          : story.points >= 50
-            ? CONFIG.colors.warning
-            : CONFIG.colors.secondary;
-    this.addBadge(itemStack, {
-      text: `${story.points}`,
-      color: badgeColor,
-      sizes,
-    });
-    itemStack.addSpacer(sizes.spacing);
-
-    this.addNewDot(itemStack, story, sizes);
+    if (story.hnUrl) itemStack.url = story.hnUrl;
 
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleText = textStack.addText(story.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    const titleText = textStack.addText(FormatUtils.truncate(story.title, 60));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
-    titleText.lineLimit = 2;
+    titleText.lineLimit = 1;
 
-    const metaParts = [`${story.comments} comments`];
-    if (story.domain) metaParts.push(story.domain);
-    const metaText = textStack.addText(metaParts.join(" · "));
+    const metaText = textStack.addText(`${story.points}pts · ${story.comments}cmt`);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.secondary;
+    metaText.textColor = CONFIG.colors.tertiary;
     metaText.lineLimit = 1;
+
+    itemStack.addSpacer();
+    this.addNewDot(itemStack, story, sizes);
   }
 }
 
@@ -1471,68 +1390,46 @@ class GitHubDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.releases, sizes);
+    this.renderItemList(contentStack, data.releases, sizes, true, widgetSize);
   }
 
-  renderItem(stack, release, sizes) {
+  renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
-    itemStack.layoutVertically();
+    itemStack.layoutHorizontally();
+    itemStack.centerAlignContent();
 
-    if (release.url) {
-      itemStack.url = release.url;
-    }
+    if (item.url) itemStack.url = item.url;
 
-    const headerStack = itemStack.addStack();
-    headerStack.layoutHorizontally();
+    const textStack = itemStack.addStack();
+    textStack.layoutVertically();
 
-    // Author avatar
-    if (release.authorAvatar) {
-      this.addCircularImage(headerStack, release.authorAvatar, sizes.fontSize.secondary);
-      headerStack.addSpacer(CONFIG.designTokens.compactSpacing);
-    }
+    const titleRow = textStack.addStack();
+    titleRow.layoutHorizontally();
+    titleRow.centerAlignContent();
 
-    this.addNewDot(headerStack, release, sizes);
+    const titleText = titleRow.addText(FormatUtils.truncate(item.tagName, 40));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.primary;
+    titleText.lineLimit = 1;
 
-    const repoText = headerStack.addText(release.repo);
-    repoText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    repoText.textColor = CONFIG.colors.accent;
-
-    headerStack.addSpacer(CONFIG.designTokens.compactSpacing);
-
-    const tagText = headerStack.addText(release.tagName);
-    tagText.font = Font.systemFont(sizes.fontSize.tertiary);
-    tagText.textColor = CONFIG.colors.secondary;
-
-    if (release.isPrerelease) {
-      headerStack.addSpacer(CONFIG.designTokens.compactSpacing);
-      const preText = headerStack.addText("pre");
-      preText.font = Font.boldSystemFont(sizes.fontSize.tertiary);
+    if (item.isPrerelease) {
+      titleRow.addSpacer(4);
+      const preText = titleRow.addText("pre-release");
+      preText.font = Font.systemFont(sizes.fontSize.tertiary);
       preText.textColor = CONFIG.colors.warning;
     }
 
-    // Release name (if meaningful and different from tag)
-    if (release.releaseName && release.releaseName !== release.tagName) {
-      const nameText = itemStack.addText(FormatUtils.truncate(release.releaseName, 40));
-      nameText.font = Font.systemFont(sizes.fontSize.tertiary);
-      nameText.textColor = CONFIG.colors.secondaryBright;
-      nameText.lineLimit = 1;
-    }
+    this.addNewDot(titleRow, item, sizes);
 
-    const metaParts = [release.author, release.timeAgo];
+    const repoText = textStack.addText(item.repo);
+    repoText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
+    repoText.textColor = CONFIG.colors.secondary;
+    repoText.lineLimit = 1;
 
-    // Reactions summary
-    if (release.reactions && release.reactions.totalCount > 0) {
-      const reactionParts = [];
-      if (release.reactions["+1"] > 0) reactionParts.push(`👍${release.reactions["+1"]}`);
-      if (release.reactions.heart > 0) reactionParts.push(`❤️${release.reactions.heart}`);
-      if (release.reactions.hooray > 0) reactionParts.push(`🎉${release.reactions.hooray}`);
-      if (release.reactions.rocket > 0) reactionParts.push(`🚀${release.reactions.rocket}`);
-      if (reactionParts.length > 0) metaParts.push(reactionParts.join(""));
-    }
-
-    const metaText = itemStack.addText(metaParts.join(" • "));
+    const metaText = textStack.addText(`${item.author} · ${item.timeAgo}`);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.secondary;
+    metaText.textColor = CONFIG.colors.tertiary;
+    metaText.lineLimit = 1;
   }
 }
 
@@ -1617,41 +1514,44 @@ class WikipediaDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.edits, sizes);
+    this.renderItemList(contentStack, data.edits, sizes, true, widgetSize);
   }
 
-  renderItem(stack, edit, sizes) {
+  renderItem(stack, edit, sizes, widgetSize) {
     const itemStack = stack.addStack();
-    itemStack.layoutVertically();
+    itemStack.layoutHorizontally();
+    itemStack.centerAlignContent();
 
-    if (edit.url) {
-      itemStack.url = edit.url;
-    }
+    if (edit.url) itemStack.url = edit.url;
 
-    const headerStack = itemStack.addStack();
-    headerStack.layoutHorizontally();
+    this.addBadge(itemStack, { text: edit.language, sizes });
+    itemStack.addSpacer(sizes.spacing);
 
-    this.addBadge(headerStack, { text: edit.language, sizes });
+    const textStack = itemStack.addStack();
+    textStack.layoutVertically();
 
-    headerStack.addSpacer(sizes.spacing);
+    const titleRow = textStack.addStack();
+    titleRow.layoutHorizontally();
+    titleRow.centerAlignContent();
 
-    this.addNewDot(headerStack, edit, sizes);
-
-    const titleText = headerStack.addText(edit.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    const titleText = titleRow.addText(FormatUtils.truncate(edit.title, 40));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
+    this.addNewDot(titleRow, edit, sizes);
+
     if (edit.comment && edit.comment !== "N/A") {
-      const commentText = itemStack.addText(edit.comment);
+      const commentText = textStack.addText(edit.comment);
       commentText.font = Font.systemFont(sizes.fontSize.secondary);
       commentText.textColor = CONFIG.colors.secondary;
       commentText.lineLimit = 1;
     }
 
-    const metaText = itemStack.addText(`${edit.user} • ${edit.timeAgo}`);
+    const metaText = textStack.addText(`${edit.user} · ${edit.timeAgo}`);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
     metaText.textColor = CONFIG.colors.tertiary;
+    metaText.lineLimit = 1;
   }
 }
 
@@ -1708,18 +1608,17 @@ class TimelineDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    const headerTitles = { contributions: "Contributions", media: "Media Log" };
-    const title = headerTitles[this.category] || "Timeline";
-    this.addHeader(widget, title, sizes);
+    const headerOptions = this.category ? { subtitle: this.category } : {};
+    this.addHeader(widget, "Timeline", sizes, headerOptions);
     widget.addSpacer(sizes.spacing);
 
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.events, sizes);
+    this.renderItemList(contentStack, data.events, sizes, true, widgetSize);
   }
 
-  renderItem(stack, event, sizes) {
+  renderItem(stack, event, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
@@ -1806,53 +1705,34 @@ class BookmarksDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.bookmarks, sizes, true);
+    this.renderItemList(contentStack, data.bookmarks, sizes, true, widgetSize);
   }
 
-  renderItem(stack, bookmark, sizes) {
+  renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
-    itemStack.layoutVertically();
+    itemStack.layoutHorizontally();
+    itemStack.centerAlignContent();
 
-    if (bookmark.url) {
-      itemStack.url = bookmark.url;
-    }
+    if (item.url) itemStack.url = item.url;
 
-    const titleRow = itemStack.addStack();
+    const textStack = itemStack.addStack();
+    textStack.layoutVertically();
+
+    const titleRow = textStack.addStack();
     titleRow.layoutHorizontally();
     titleRow.centerAlignContent();
 
-    this.addNewDot(titleRow, bookmark, sizes);
-
-    const titleText = titleRow.addText(bookmark.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    const titleText = titleRow.addText(FormatUtils.truncate(item.title, 45));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
-    if (bookmark.description) {
-      const descText = itemStack.addText(bookmark.description);
-      descText.font = Font.systemFont(sizes.fontSize.tertiary);
-      descText.textColor = CONFIG.colors.secondary;
-      descText.lineLimit = 1;
-    }
+    this.addNewDot(titleRow, item, sizes);
 
-    const metaStack = itemStack.addStack();
-    metaStack.layoutHorizontally();
-    metaStack.centerAlignContent();
-
-    if (bookmark.tags.length > 0) {
-      const tagsText = metaStack.addText(bookmark.tags.slice(0, 3).join(" · "));
-      tagsText.font = Font.systemFont(sizes.fontSize.tertiary);
-      tagsText.textColor = CONFIG.colors.accent;
-    }
-
-    if (bookmark.dateAdded) {
-      metaStack.addSpacer(sizes.spacing);
-      const timeText = metaStack.addText(
-        FormatUtils.formatTimeAgo(bookmark.dateAdded),
-      );
-      timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-      timeText.textColor = CONFIG.colors.tertiary;
-    }
+    const urlText = textStack.addText(item.url);
+    urlText.font = Font.systemFont(sizes.fontSize.tertiary);
+    urlText.textColor = CONFIG.colors.tertiary;
+    urlText.lineLimit = 1;
   }
 }
 
@@ -1919,11 +1799,8 @@ class BooksDataSource extends DataSource {
       cover.cornerRadius = CONFIG.designTokens.cornerRadius.cover;
       cover.centerAlignImage();
 
-      if (widgetSize === "large") {
-        cover.imageSize = new Size(80, 120);
-      } else {
-        cover.imageSize = new Size(60, 90);
-      }
+      const imgSize = CONFIG.images.card[widgetSize];
+      cover.imageSize = new Size(imgSize.width, imgSize.height);
 
       bodyStack.addSpacer(sizes.spacing * 2);
     }
@@ -1945,22 +1822,15 @@ class BooksDataSource extends DataSource {
     if (widgetSize !== "small") {
       infoStack.addSpacer(sizes.spacing);
 
-      const publisherText = infoStack.addText(
-        `${data.publisher}, ${data.publishedDate}`,
-      );
-      publisherText.font = Font.systemFont(sizes.fontSize.tertiary);
-      publisherText.textColor = CONFIG.colors.tertiary;
-      publisherText.lineLimit = 1;
-
       const detailText = infoStack.addText(
-        `${data.pageCount} Pages · ${data.categories}`,
+        `${data.pageCount} pages · ${data.publisher}, ${data.publishedDate}`,
       );
       detailText.font = Font.systemFont(sizes.fontSize.tertiary);
       detailText.textColor = CONFIG.colors.tertiary;
       detailText.lineLimit = 1;
 
       const metaText = infoStack.addText(
-        `${data.language} · ${data.maturityRating}`,
+        `${data.categories} · ${data.language}`,
       );
       metaText.font = Font.systemFont(sizes.fontSize.tertiary);
       metaText.textColor = CONFIG.colors.tertiary;
@@ -1976,7 +1846,8 @@ class BooksDataSource extends DataSource {
       const cover = coverStack.addImage(data.coverImage);
       cover.cornerRadius = CONFIG.designTokens.cornerRadius.cover;
       cover.centerAlignImage();
-      cover.imageSize = new Size(40, 60);
+      const smallImgSize = CONFIG.images.card.small;
+      cover.imageSize = new Size(smallImgSize.width, smallImgSize.height);
     }
 
     bodyStack.addSpacer();
@@ -2292,45 +2163,32 @@ class BlueskyDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.posts, sizes, true);
+    this.renderItemList(contentStack, data.posts, sizes, true, widgetSize);
   }
 
-  renderItem(stack, post, sizes) {
+  renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
 
-    if (post.url) {
-      itemStack.url = post.url;
-    }
-
-    const badgeColor =
-      post.likes >= 100
-        ? CONFIG.colors.down
-        : post.likes >= 10
-          ? CONFIG.colors.warning
-          : CONFIG.colors.secondary;
-    this.addBadge(itemStack, {
-      text: `${post.likes}`,
-      color: badgeColor,
-      sizes,
-    });
-    itemStack.addSpacer(sizes.spacing);
-
-    this.addNewDot(itemStack, post, sizes);
+    if (item.url) itemStack.url = item.url;
 
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleText = textStack.addText(FormatUtils.truncate(post.text, 80));
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    const titleText = textStack.addText(FormatUtils.truncate(item.text, 60));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 2;
 
-    const meta = `${post.author} · ${FormatUtils.timeAgo(post.createdAt)}`;
-    const metaText = textStack.addText(meta);
+    const authorText = textStack.addText(item.author);
+    authorText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
+    authorText.textColor = CONFIG.colors.secondary;
+    authorText.lineLimit = 1;
+
+    const metaText = textStack.addText(`${item.likes} likes · ${item.replies} replies`);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.secondary;
+    metaText.textColor = CONFIG.colors.tertiary;
     metaText.lineLimit = 1;
   }
 }
@@ -2408,40 +2266,39 @@ class ActivityDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.items, sizes);
+    this.renderItemList(contentStack, data.items, sizes, true, widgetSize);
   }
 
-  renderItem(stack, item, sizes) {
+  renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
     itemStack.centerAlignContent();
 
-    if (item.url) {
-      itemStack.url = item.url;
-    }
-
-    const sourceIcon = ActivityDataSource.sourceIcons[item.source] || "questionmark.circle";
-    const sourceColor = ActivityDataSource.sourceColors[item.source] || CONFIG.colors.accent;
-    this.addBadge(itemStack, { icon: sourceIcon, color: sourceColor, sizes });
-
-    itemStack.addSpacer(sizes.spacing);
-
-    this.addNewDot(itemStack, item, sizes);
+    if (item.url) itemStack.url = item.url;
 
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleText = textStack.addText(item.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    const titleRow = textStack.addStack();
+    titleRow.layoutHorizontally();
+    titleRow.centerAlignContent();
+
+    const titleText = titleRow.addText(FormatUtils.truncate(item.title, 45));
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
-    titleText.lineLimit = 2;
+    titleText.lineLimit = 1;
 
-    const detailText = textStack.addText(item.detail);
-    detailText.font = Font.systemFont(sizes.fontSize.tertiary);
-    detailText.textColor = CONFIG.colors.secondary;
-    detailText.lineLimit = 1;
+    this.addNewDot(titleRow, item, sizes);
 
-    itemStack.addSpacer();
+    const sourceText = textStack.addText(item.source);
+    sourceText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
+    sourceText.textColor = CONFIG.colors.secondary;
+    sourceText.lineLimit = 1;
+
+    const metaText = textStack.addText(item.detail);
+    metaText.font = Font.systemFont(sizes.fontSize.tertiary);
+    metaText.textColor = CONFIG.colors.tertiary;
+    metaText.lineLimit = 1;
   }
 }
 
@@ -2578,18 +2435,18 @@ class StatusBoardDataSource extends DataSource {
       const textStack = row.addStack();
       textStack.layoutVertically();
 
-      if (widgetSize !== "small") {
-        const nameText = textStack.addText(source.config?.name || source.name);
-        nameText.font = Font.semiboldSystemFont(sizes.fontSize.tertiary);
-        nameText.textColor = CONFIG.colors.secondary;
-      }
-
       const itemText = textStack.addText(
         FormatUtils.truncate(source.topItem, widgetSize === "small" ? 30 : 60),
       );
       itemText.font = Font.mediumSystemFont(sizes.fontSize.primary);
       itemText.textColor = CONFIG.colors.primary;
       itemText.lineLimit = 1;
+
+      if (widgetSize !== "small") {
+        const nameText = textStack.addText(source.config?.name || source.name);
+        nameText.font = Font.systemFont(sizes.fontSize.tertiary);
+        nameText.textColor = CONFIG.colors.tertiary;
+      }
     } else {
       const emptyText = row.addText(
         `${source.config?.name || source.name} — no data`,
@@ -2698,7 +2555,7 @@ class DHBWTimetableDataSource extends DataSource {
     });
   }
 
-  renderItem(stack, event, sizes) {
+  renderItem(stack, event, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
 
@@ -3032,40 +2889,43 @@ class Mosaic {
   addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
     widget.addSpacer();
 
+    // Hairline separator
+    const sep = widget.addStack();
+    sep.size = new Size(0, 0.5);
+    sep.backgroundColor = CONFIG.colors.tertiary;
+    widget.addSpacer(CONFIG.designTokens.compactSpacing);
+
     const footer = widget.addStack();
     footer.layoutHorizontally();
+    footer.centerAlignContent();
 
-    if (usingCache) {
+    const updateTime = new Date();
+    const hours = updateTime.getHours().toString().padStart(2, "0");
+    const minutes = updateTime.getMinutes().toString().padStart(2, "0");
+    const prefix = widgetSize === "large" ? "Updated " : "";
+    const timeString = `${prefix}${hours}:${minutes}`;
+
+    const timeText = footer.addText(timeString);
+    timeText.font = Font.systemFont(sizes.fontSize.caption);
+    timeText.textColor = CONFIG.colors.tertiary;
+
+    if (usingCache && widgetSize !== "small") {
+      footer.addSpacer();
+
       const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
       offlineIcon.imageSize = new Size(
-        sizes.fontSize.tertiary,
-        sizes.fontSize.tertiary,
+        sizes.fontSize.caption,
+        sizes.fontSize.caption,
       );
       offlineIcon.tintColor = CONFIG.colors.warning;
 
       if (widgetSize === "large") {
         footer.addSpacer(CONFIG.designTokens.compactSpacing);
-
         const offlineText = footer.addText(CONFIG.messages.offline);
-        offlineText.font = Font.systemFont(sizes.fontSize.tertiary);
+        offlineText.font = Font.systemFont(sizes.fontSize.caption);
         offlineText.textColor = CONFIG.colors.warning;
       }
     }
-
-    footer.addSpacer();
-
-    const updateTime = new Date();
-    const hours = updateTime.getHours().toString().padStart(2, "0");
-    const minutes = updateTime.getMinutes().toString().padStart(2, "0");
-    const timeString =
-      widgetSize === "large"
-        ? `Updated ${hours}:${minutes}`
-        : `${hours}:${minutes}`;
-
-    const timeText = footer.addText(timeString);
-    timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-    timeText.textColor = new Color(Device.isUsingDarkAppearance() ? "#636366" : "#C7C7CC", 0.5);
-    timeText.rightAlignText();
   }
 
   async presentWidget(widget, widgetSize) {
