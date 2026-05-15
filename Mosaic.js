@@ -29,14 +29,14 @@ const CONFIG = {
   // Widget sizing configuration
   sizing: {
     small: {
-      maxItems: 3,
+      maxItems: 4,
       fontSize: { primary: 12, secondary: 10, tertiary: 9, caption: 8 },
       iconSize: 14,
       spacing: 5,
       padding: 14,
     },
     medium: {
-      maxItems: 6,
+      maxItems: 4,
       fontSize: { primary: 14, secondary: 12, tertiary: 10, caption: 9 },
       iconSize: 16,
       spacing: 8,
@@ -375,19 +375,6 @@ class CacheManager {
     try {
       const { fm, path: cachePath } = this.getCachePath(source);
 
-      if (fm.fileExists(cachePath)) {
-        const prevPath = fm.joinPath(
-          fm.joinPath(fm.documentsDirectory(), "widget-cache"),
-          `previous_${source}.json`,
-        );
-        try {
-          const existing = fm.readString(cachePath);
-          fm.writeString(prevPath, existing);
-        } catch {
-          /* ignore copy failures */
-        }
-      }
-
       const cacheData = {
         timestamp: Date.now(),
         data: data,
@@ -397,28 +384,6 @@ class CacheManager {
       console.log(`Cache saved for ${source}`);
     } catch (error) {
       console.error(`Failed to save cache for ${source}: ${error.message}`);
-    }
-  }
-
-  static async loadPrevious(source) {
-    try {
-      const fm = this.getFileManager();
-      const prevPath = fm.joinPath(
-        fm.joinPath(fm.documentsDirectory(), "widget-cache"),
-        `previous_${source}.json`,
-      );
-
-      if (!fm.fileExists(prevPath)) return null;
-
-      if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(prevPath)) {
-        await fm.downloadFileFromiCloud(prevPath);
-      }
-
-      const content = fm.readString(prevPath);
-      const parsed = JSON.parse(content);
-      return parsed.data || null;
-    } catch {
-      return null;
     }
   }
 
@@ -745,7 +710,9 @@ class FormatUtils {
   }
 
   static pluralize(count, singular, plural) {
-    return count === 1 ? `${count} ${singular}` : `${count} ${plural || singular + "s"}`;
+    return count === 1
+      ? `${count} ${singular}`
+      : `${count} ${plural || singular + "s"}`;
   }
 
   static formatTime(value) {
@@ -856,27 +823,31 @@ class DataSource {
       img.tintColor = CONFIG.colors.white;
     } else {
       const label = badge.addText(text);
-      label.font = Font.boldSystemFont(sizes.fontSize.tertiary);
+      label.font = Font.mediumSystemFont(sizes.fontSize.tertiary);
       label.textColor = CONFIG.colors.white;
     }
 
     return badge;
   }
 
-  addNewDot(stack, item, sizes) {
-    if (!item._isNew) return;
-    const label = stack.addText("new");
-    label.font = Font.boldSystemFont(sizes.fontSize.tertiary);
-    label.textColor = CONFIG.colors.up;
-    stack.addSpacer(4);
+  addSourceBadge(stack, item, sizes) {
+    const icons = this.constructor.sourceIcons || {};
+    const colors = this.constructor.sourceColors || {};
+    this.addBadge(stack, {
+      icon: icons[item.source] || "questionmark.circle",
+      color: colors[item.source] || CONFIG.colors.accent,
+      sizes,
+    });
   }
 
   static async preloadImages(items, urlKey, cacheKey) {
-    await Promise.all(items.map(async (item) => {
-      if (item[urlKey]) {
-        item[cacheKey] = await ImageCache.load(item[urlKey]);
-      }
-    }));
+    await Promise.all(
+      items.map(async (item) => {
+        if (item[urlKey]) {
+          item[cacheKey] = await ImageCache.load(item[urlKey]);
+        }
+      }),
+    );
   }
 
   addCircularImage(stack, image, size) {
@@ -885,33 +856,13 @@ class DataSource {
     img.cornerRadius = size / 2;
   }
 
-  getItemKey(item) {
-    return null;
-  }
-
-  getItemsFromData(data) {
-    return null;
-  }
-
-  markNewItems(data, previousData) {
-    const items = this.getItemsFromData(data);
-    const prevItems = this.getItemsFromData(previousData);
-    if (!items || !prevItems) return;
-
-    const prevKeys = new Set(
-      prevItems.map((i) => this.getItemKey(i)).filter(Boolean),
-    );
-    if (prevKeys.size === 0) return;
-
-    for (const item of items) {
-      const key = this.getItemKey(item);
-      if (key && !prevKeys.has(key)) {
-        item._isNew = true;
-      }
-    }
-  }
-
-  renderItemList(stack, items, sizes, useSeparators = false, widgetSize = "medium") {
+  renderItemList(
+    stack,
+    items,
+    sizes,
+    useSeparators = false,
+    widgetSize = "medium",
+  ) {
     items.forEach((item, index) => {
       this.renderItem(stack, item, sizes, widgetSize);
       if (index < items.length - 1) {
@@ -929,7 +880,17 @@ class DataSource {
     });
   }
 
-  renderGrid(stack, items, sizes, widgetSize, renderCell) {
+  renderGrid(stack, items, sizes, widgetSize) {
+    if (widgetSize === "small") {
+      const listStack = stack.addStack();
+      listStack.layoutVertically();
+      items.forEach((item, index) => {
+        this.renderItem(listStack, item, sizes, widgetSize);
+        if (index < items.length - 1) listStack.addSpacer(sizes.spacing);
+      });
+      return;
+    }
+
     const columns = 2;
     const itemsPerColumn = Math.ceil(items.length / columns);
 
@@ -946,7 +907,7 @@ class DataSource {
       const end = Math.min(start + itemsPerColumn, items.length);
 
       for (let i = start; i < end; i++) {
-        renderCell(columnStack, items[i], sizes, widgetSize);
+        this.renderItem(columnStack, items[i], sizes, widgetSize);
         if (i < end - 1) columnStack.addSpacer(sizes.spacing);
       }
     }
@@ -987,6 +948,13 @@ class BillboardDataSource extends DataSource {
     };
   }
 
+  static getTrend(current, lastWeek) {
+    if (lastWeek === 0) return { char: "★", color: CONFIG.colors.new };
+    if (current < lastWeek) return { char: "↑", color: CONFIG.colors.up };
+    if (current > lastWeek) return { char: "↓", color: CONFIG.colors.down };
+    return { char: "−", color: CONFIG.colors.unchanged };
+  }
+
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
@@ -994,9 +962,7 @@ class BillboardDataSource extends DataSource {
     widget.addSpacer(sizes.spacing);
 
     const contentStack = widget.addStack();
-    this.renderGrid(contentStack, data.items, sizes, widgetSize, (stack, item, sz, wz) => {
-      this.renderItem(stack, item, sz, wz);
-    });
+    this.renderGrid(contentStack, data.items, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize = "medium") {
@@ -1022,18 +988,18 @@ class BillboardDataSource extends DataSource {
     titleRow.centerAlignContent();
 
     const titleText = titleRow.addText(FormatUtils.truncate(item.title, 28));
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
     titleRow.addSpacer(sizes.spacing);
-    const bbLastWeek = item.metadata.last_week;
-    const bbCurrent = item.position;
-    const bbChar = bbLastWeek === 0 ? "★" : bbCurrent < bbLastWeek ? "↑" : bbCurrent > bbLastWeek ? "↓" : "−";
-    const bbColor = bbLastWeek === 0 ? CONFIG.colors.new : bbCurrent < bbLastWeek ? CONFIG.colors.up : bbCurrent > bbLastWeek ? CONFIG.colors.down : CONFIG.colors.unchanged;
-    const indicatorText = titleRow.addText(bbChar);
+    const { char, color } = BillboardDataSource.getTrend(
+      item.position,
+      item.metadata.last_week,
+    );
+    const indicatorText = titleRow.addText(char);
     indicatorText.font = Font.systemFont(sizes.fontSize.secondary);
-    indicatorText.textColor = bbColor;
+    indicatorText.textColor = color;
 
     const subtitleText = textStack.addText(
       FormatUtils.truncate(item.subtitle, 30),
@@ -1043,14 +1009,15 @@ class BillboardDataSource extends DataSource {
     subtitleText.lineLimit = 1;
 
     if (item.metadata.weeks) {
-      const metaText = textStack.addText(FormatUtils.pluralize(item.metadata.weeks, "week"));
+      const metaText = textStack.addText(
+        FormatUtils.pluralize(item.metadata.weeks, "week"),
+      );
       metaText.font = Font.systemFont(sizes.fontSize.tertiary);
       metaText.textColor = CONFIG.colors.tertiary;
     }
 
     itemStack.addSpacer();
   }
-
 }
 
 class IMDbDataSource extends DataSource {
@@ -1069,16 +1036,24 @@ class IMDbDataSource extends DataSource {
 
     const movies =
       response.movies?.data && Array.isArray(response.movies.data)
-        ? response.movies.data.slice(0, half).map((m) => this.formatItem(m, "movie"))
+        ? response.movies.data
+            .slice(0, half)
+            .map((m) => this.formatItem(m, "movie"))
         : [];
     const tvShows =
       widgetSize !== "small" &&
       response.tv_shows?.data &&
       Array.isArray(response.tv_shows.data)
-        ? response.tv_shows.data.slice(0, half).map((t) => this.formatItem(t, "tv"))
+        ? response.tv_shows.data
+            .slice(0, half)
+            .map((t) => this.formatItem(t, "tv"))
         : [];
 
-    await DataSource.preloadImages([...movies, ...tvShows], "imageUrl", "poster");
+    await DataSource.preloadImages(
+      [...movies, ...tvShows],
+      "imageUrl",
+      "poster",
+    );
 
     return {
       movies: movies,
@@ -1098,7 +1073,6 @@ class IMDbDataSource extends DataSource {
       url: item.href || "",
       type: type,
       imageUrl: item.image || null,
-      numVotes: item.numVotes ? parseInt(item.numVotes, 10) : null,
       poster: null,
     };
   }
@@ -1106,18 +1080,18 @@ class IMDbDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    this.addHeader(widget, "Popular on IMDb", sizes, { subtitle: "Movies · TV" });
+    this.addHeader(widget, "Popular on IMDb", sizes, {
+      subtitle: "Movies · TV",
+    });
     widget.addSpacer(sizes.spacing);
 
     const allItems = [
-      ...data.movies.map(m => ({ ...m, type: "movie" })),
-      ...data.tvShows.map(t => ({ ...t, type: "tv" })),
+      ...data.movies.map((m) => ({ ...m, type: "movie" })),
+      ...data.tvShows.map((t) => ({ ...t, type: "tv" })),
     ].slice(0, sizes.maxItems);
 
     const contentStack = widget.addStack();
-    this.renderGrid(contentStack, allItems, sizes, widgetSize, (stack, item, sz, wz) => {
-      this.renderItem(stack, item, sz, wz);
-    });
+    this.renderGrid(contentStack, allItems, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize = "medium") {
@@ -1150,7 +1124,10 @@ class IMDbDataSource extends DataSource {
 
     const badgeStack = textStack.addStack();
     badgeStack.addSpacer(2);
-    this.addBadge(badgeStack, { text: item.rating === "" ? "NEW" : String(item.rating ?? ""), sizes });
+    this.addBadge(badgeStack, {
+      text: item.rating === "" ? "NEW" : String(item.rating ?? ""),
+      sizes,
+    });
   }
 }
 
@@ -1165,17 +1142,8 @@ class SteamDataSource extends DataSource {
 
     const limit = CONFIG.sizing[widgetSize].maxItems;
     const allGames = [];
-    const profileStatuses = [];
 
-    for (const [username, userData] of Object.entries(response)) {
-      profileStatuses.push({
-        name: userData.profileName || username,
-        status: userData.status || "offline",
-        avatarUrl: userData.avatarUrl || null,
-        profileUrl: userData.profileUrl || "",
-        totalGames: userData.totalGames || null,
-      });
-
+    for (const userData of Object.values(response)) {
       if (userData.recentGames) {
         userData.recentGames.forEach((game) => {
           allGames.push({
@@ -1189,28 +1157,14 @@ class SteamDataSource extends DataSource {
       }
     }
 
-    // Sort by play time and take top items
     allGames.sort((a, b) => b.hoursPlayed - a.hoursPlayed);
 
     const games = allGames.slice(0, limit);
-    await Promise.all([
-      this.preloadIcons(games),
-      DataSource.preloadImages(profileStatuses, "avatarUrl", "avatar"),
-    ]);
+    await DataSource.preloadImages(games, "iconUrl", "icon");
 
     return {
       games: games,
-      profiles: profileStatuses,
     };
-  }
-
-  async preloadIcons(games) {
-    const loadPromises = games.map(async (game) => {
-      if (game.iconUrl) {
-        game.icon = await ImageCache.load(game.iconUrl);
-      }
-    });
-    await Promise.all(loadPromises);
   }
 
   renderWidget(widget, data, widgetSize) {
@@ -1220,9 +1174,8 @@ class SteamDataSource extends DataSource {
     widget.addSpacer(sizes.spacing);
 
     const contentStack = widget.addStack();
-    this.renderGrid(contentStack, data.games, sizes, widgetSize, (stack, item, sz, wz) => {
-      this.renderItem(stack, item, sz, wz);
-    });
+    contentStack.layoutVertically();
+    this.renderItemList(contentStack, data.games, sizes, false, widgetSize);
   }
 
   renderItem(stack, game, sizes, widgetSize = "medium") {
@@ -1241,7 +1194,9 @@ class SteamDataSource extends DataSource {
       iconImg.cornerRadius = imgSize.cornerRadius;
     } else {
       const imgSize = CONFIG.images.grid[widgetSize];
-      const icon = itemStack.addImage(SFSymbol.named("gamecontroller.fill").image);
+      const icon = itemStack.addImage(
+        SFSymbol.named("gamecontroller.fill").image,
+      );
       icon.imageSize = new Size(imgSize.width, imgSize.height);
       icon.tintColor = CONFIG.colors.secondary;
     }
@@ -1252,7 +1207,7 @@ class SteamDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(game.name, 35));
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
@@ -1271,13 +1226,6 @@ class SteamDataSource extends DataSource {
 class HackerNewsDataSource extends DataSource {
   isEmpty(data) {
     return !data.stories || data.stories.length === 0;
-  }
-
-  getItemKey(item) {
-    return item.hnUrl;
-  }
-  getItemsFromData(data) {
-    return data?.stories;
   }
 
   async fetchData(widgetSize) {
@@ -1326,13 +1274,14 @@ class HackerNewsDataSource extends DataSource {
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
-    const metaText = textStack.addText(`${story.points}pts · ${story.comments}cmt`);
+    const metaText = textStack.addText(
+      `${story.points}pts · ${story.comments}cmt`,
+    );
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
     metaText.textColor = CONFIG.colors.tertiary;
     metaText.lineLimit = 1;
 
     itemStack.addSpacer();
-    this.addNewDot(itemStack, story, sizes);
   }
 }
 
@@ -1341,23 +1290,20 @@ class GitHubDataSource extends DataSource {
     return !data.releases || data.releases.length === 0;
   }
 
-  getItemKey(item) {
-    return `${item.repo}:${item.tagName}`;
-  }
-  getItemsFromData(data) {
-    return data?.releases;
+  async fetchData(widgetSize) {
+    const releases = await this.fetchReleases(widgetSize);
+    await DataSource.preloadImages(releases, "authorAvatarUrl", "authorAvatar");
+    return { releases };
   }
 
-  async fetchData(widgetSize) {
+  async fetchReleases(widgetSize) {
     const repos = this.config.repos.join(",");
     const response = await this.api.fetch(this.config.endpoint, { repos });
     const limit = CONFIG.sizing[widgetSize].maxItems;
 
-    if (!response || !Array.isArray(response.releases)) {
-      return { releases: [] };
-    }
+    if (!response || !Array.isArray(response.releases)) return [];
 
-    const releases = response.releases.slice(0, limit).map((release) => ({
+    return response.releases.slice(0, limit).map((release) => ({
       repo: this.extractRepoName(release.repo),
       releaseName: release.name || "",
       tagName: release.tagName,
@@ -1366,13 +1312,8 @@ class GitHubDataSource extends DataSource {
       authorAvatarUrl: release.authorAvatarUrl || null,
       isPrerelease: release.isPrerelease,
       url: release.url || "",
-      reactions: release.reactions || null,
       authorAvatar: null,
     }));
-
-    await DataSource.preloadImages(releases, "authorAvatarUrl", "authorAvatar");
-
-    return { releases };
   }
 
   extractRepoName(repoString) {
@@ -1419,8 +1360,6 @@ class GitHubDataSource extends DataSource {
       preText.textColor = CONFIG.colors.warning;
     }
 
-    this.addNewDot(titleRow, item, sizes);
-
     const repoText = textStack.addText(item.repo);
     repoText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
     repoText.textColor = CONFIG.colors.secondary;
@@ -1436,13 +1375,6 @@ class GitHubDataSource extends DataSource {
 class WikipediaDataSource extends DataSource {
   isEmpty(data) {
     return !data.edits || data.edits.length === 0;
-  }
-
-  getItemKey(item) {
-    return `${item.language}:${item.title}`;
-  }
-  getItemsFromData(data) {
-    return data?.edits;
   }
 
   async fetchData(widgetSize) {
@@ -1530,16 +1462,10 @@ class WikipediaDataSource extends DataSource {
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleRow = textStack.addStack();
-    titleRow.layoutHorizontally();
-    titleRow.centerAlignContent();
-
-    const titleText = titleRow.addText(FormatUtils.truncate(edit.title, 40));
+    const titleText = textStack.addText(FormatUtils.truncate(edit.title, 40));
     titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
-
-    this.addNewDot(titleRow, edit, sizes);
 
     if (edit.comment && edit.comment !== "N/A") {
       const commentText = textStack.addText(edit.comment);
@@ -1548,10 +1474,15 @@ class WikipediaDataSource extends DataSource {
       commentText.lineLimit = 1;
     }
 
-    const metaText = textStack.addText(`${edit.user} · ${edit.timeAgo}`);
-    metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.tertiary;
-    metaText.lineLimit = 1;
+    const userText = textStack.addText(edit.user);
+    userText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
+    userText.textColor = CONFIG.colors.secondary;
+    userText.lineLimit = 1;
+
+    const timeText = textStack.addText(edit.timeAgo);
+    timeText.font = Font.systemFont(sizes.fontSize.tertiary);
+    timeText.textColor = CONFIG.colors.tertiary;
+    timeText.lineLimit = 1;
   }
 }
 
@@ -1576,18 +1507,11 @@ class TimelineDataSource extends DataSource {
     return !data.events || data.events.length === 0;
   }
 
-  getItemKey(item) {
-    return `${item.source}:${item.title}:${item.date}`;
-  }
-  getItemsFromData(data) {
-    return data?.events;
-  }
-
   async fetchData(widgetSize) {
     const params = this.category ? { category: this.category } : {};
     const response = await this.api.fetch(this.config.endpoint, params);
 
-    const timelineLimits = { small: 3, medium: 4, large: 8 };
+    const timelineLimits = { small: 4, medium: 4, large: 8 };
     const limit =
       timelineLimits[widgetSize] ?? CONFIG.sizing[widgetSize].maxItems;
 
@@ -1627,23 +1551,14 @@ class TimelineDataSource extends DataSource {
       itemStack.url = event.url;
     }
 
-    // Source badge
-    const sourceIcon =
-      TimelineDataSource.sourceIcons[event.source] || "questionmark.circle";
-    const sourceColor =
-      TimelineDataSource.sourceColors[event.source] || CONFIG.colors.accent;
-    this.addBadge(itemStack, { icon: sourceIcon, color: sourceColor, sizes });
-
+    this.addSourceBadge(itemStack, event, sizes);
     itemStack.addSpacer(sizes.spacing);
 
-    this.addNewDot(itemStack, event, sizes);
-
-    // Text content
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
     const titleText = textStack.addText(event.title);
-    titleText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 2;
 
@@ -1660,13 +1575,6 @@ class BookmarksDataSource extends DataSource {
     return !data.bookmarks || data.bookmarks.length === 0;
   }
 
-  getItemKey(item) {
-    return item.url;
-  }
-  getItemsFromData(data) {
-    return data?.bookmarks;
-  }
-
   async fetchData(widgetSize) {
     const response = await this.api.fetch(this.config.endpoint);
 
@@ -1677,8 +1585,9 @@ class BookmarksDataSource extends DataSource {
     let bookmarks = response.bookmarks;
     if (this.category) {
       const tag = this.category.toLowerCase();
-      bookmarks = bookmarks.filter((b) =>
-        Array.isArray(b.tags) && b.tags.some((t) => t.toLowerCase() === tag),
+      bookmarks = bookmarks.filter(
+        (b) =>
+          Array.isArray(b.tags) && b.tags.some((t) => t.toLowerCase() === tag),
       );
     }
 
@@ -1690,6 +1599,12 @@ class BookmarksDataSource extends DataSource {
         description: FormatUtils.truncate(b.description || "", 60),
         tags: b.tags || [],
         url: b.url,
+        domain: b.url
+          ? b.url
+              .replace(/^https?:\/\//, "")
+              .replace(/^www\./, "")
+              .split("/")[0]
+          : "",
         dateAdded: b.date_added,
       })),
     };
@@ -1715,21 +1630,24 @@ class BookmarksDataSource extends DataSource {
 
     if (item.url) itemStack.url = item.url;
 
+    if (this.category && item.tags.length > 0) {
+      this.addBadge(itemStack, {
+        text: item.tags[0],
+        color: CONFIG.colors.accent,
+        sizes,
+      });
+      itemStack.addSpacer(sizes.spacing);
+    }
+
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleRow = textStack.addStack();
-    titleRow.layoutHorizontally();
-    titleRow.centerAlignContent();
-
-    const titleText = titleRow.addText(FormatUtils.truncate(item.title, 45));
+    const titleText = textStack.addText(item.title);
     titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
 
-    this.addNewDot(titleRow, item, sizes);
-
-    const urlText = textStack.addText(item.url);
+    const urlText = textStack.addText(item.domain);
     urlText.font = Font.systemFont(sizes.fontSize.tertiary);
     urlText.textColor = CONFIG.colors.tertiary;
     urlText.lineLimit = 1;
@@ -2065,7 +1983,7 @@ class AstronomyDataSource extends DataSource {
           ? CONFIG.colors.warning
           : CONFIG.colors.up;
     const uvText = row.addText(`${uvValue}`);
-    uvText.font = Font.boldSystemFont(sizes.fontSize.primary);
+    uvText.font = Font.mediumSystemFont(sizes.fontSize.primary);
     uvText.textColor = uvColor;
   }
 
@@ -2146,14 +2064,6 @@ class BlueskyDataSource extends DataSource {
     return !data || !data.posts || data.posts.length === 0;
   }
 
-  getItemKey(item) {
-    return item.url;
-  }
-
-  getItemsFromData(data) {
-    return data?.posts;
-  }
-
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
@@ -2186,7 +2096,9 @@ class BlueskyDataSource extends DataSource {
     authorText.textColor = CONFIG.colors.secondary;
     authorText.lineLimit = 1;
 
-    const metaText = textStack.addText(`${item.likes} likes · ${item.replies} replies`);
+    const metaText = textStack.addText(
+      `${item.likes} likes · ${item.replies} replies`,
+    );
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
     metaText.textColor = CONFIG.colors.tertiary;
     metaText.lineLimit = 1;
@@ -2208,14 +2120,6 @@ class ActivityDataSource extends DataSource {
     return !data.items || data.items.length === 0;
   }
 
-  getItemKey(item) {
-    return `${item.source}:${item.key}`;
-  }
-
-  getItemsFromData(data) {
-    return data?.items;
-  }
-
   async fetchData(widgetSize) {
     const limit = CONFIG.sizing[widgetSize].maxItems;
     const githubConfig = CONFIG.sources.github;
@@ -2226,30 +2130,39 @@ class ActivityDataSource extends DataSource {
     if (githubConfig) {
       const githubSource = new GitHubDataSource(githubConfig, this.api);
       fetches.push(
-        githubSource.fetchData(widgetSize).then((data) =>
-          (data.releases || []).map((r) => ({
-            source: "github",
-            key: `${r.repo}:${r.tagName}`,
-            title: `${r.repo} ${r.tagName}${r.isPrerelease ? " (pre)" : ""}`,
-            detail: `${r.author} • ${r.timeAgo}`,
-            url: r.url || "",
-          }))
-        ).catch(() => [])
+        githubSource
+          .fetchReleases(widgetSize)
+          .then((releases) =>
+            releases.map((r) => ({
+              source: "github",
+              key: `${r.repo}:${r.tagName}`,
+              title: `${r.repo} ${r.tagName}${r.isPrerelease ? " (pre)" : ""}`,
+              detail: `${r.author} • ${r.timeAgo}`,
+              url: r.url || "",
+            })),
+          )
+          .catch(() => []),
       );
     }
 
     if (wikiConfig) {
       const wikiSource = new WikipediaDataSource(wikiConfig, this.api);
       fetches.push(
-        wikiSource.fetchData(widgetSize).then((data) =>
-          (data.edits || []).map((e) => ({
-            source: "wikipedia",
-            key: `${e.language}:${e.title}`,
-            title: e.title,
-            detail: e.comment && e.comment !== "N/A" ? e.comment : `${e.user} • ${e.timeAgo}`,
-            url: e.url || "",
-          }))
-        ).catch(() => [])
+        wikiSource
+          .fetchData(widgetSize)
+          .then((data) =>
+            (data.edits || []).map((e) => ({
+              source: "wikipedia",
+              key: `${e.language}:${e.title}`,
+              title: e.title,
+              detail:
+                e.comment && e.comment !== "N/A"
+                  ? e.comment
+                  : `${e.user} • ${e.timeAgo}`,
+              url: e.url || "",
+            })),
+          )
+          .catch(() => []),
       );
     }
 
@@ -2276,24 +2189,16 @@ class ActivityDataSource extends DataSource {
 
     if (item.url) itemStack.url = item.url;
 
+    this.addSourceBadge(itemStack, item, sizes);
+    itemStack.addSpacer(sizes.spacing);
+
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
 
-    const titleRow = textStack.addStack();
-    titleRow.layoutHorizontally();
-    titleRow.centerAlignContent();
-
-    const titleText = titleRow.addText(FormatUtils.truncate(item.title, 45));
+    const titleText = textStack.addText(FormatUtils.truncate(item.title, 45));
     titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.primary;
     titleText.lineLimit = 1;
-
-    this.addNewDot(titleRow, item, sizes);
-
-    const sourceText = textStack.addText(item.source);
-    sourceText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    sourceText.textColor = CONFIG.colors.secondary;
-    sourceText.lineLimit = 1;
 
     const metaText = textStack.addText(item.detail);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
@@ -2366,12 +2271,11 @@ class StatusBoardDataSource extends DataSource {
     if (!data) return null;
     const map = {
       billboard: () =>
-        data.albums?.[0] &&
-        `${data.albums[0].title} — ${data.albums[0].artist}`,
+        data.items?.[0] && `${data.items[0].title} — ${data.items[0].subtitle}`,
       imdb: () =>
         data.movies?.[0] && `${data.movies[0].title} (${data.movies[0].year})`,
       steam: () => {
-        const allGames = data.profiles?.flatMap((p) => p.games || []) || [];
+        const allGames = data.games || [];
         return allGames[0] && allGames[0].name;
       },
       hackernews: () => data.stories?.[0]?.title,
@@ -2438,15 +2342,9 @@ class StatusBoardDataSource extends DataSource {
       const itemText = textStack.addText(
         FormatUtils.truncate(source.topItem, widgetSize === "small" ? 30 : 60),
       );
-      itemText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+      itemText.font = Font.boldSystemFont(sizes.fontSize.primary);
       itemText.textColor = CONFIG.colors.primary;
       itemText.lineLimit = 1;
-
-      if (widgetSize !== "small") {
-        const nameText = textStack.addText(source.config?.name || source.name);
-        nameText.font = Font.systemFont(sizes.fontSize.tertiary);
-        nameText.textColor = CONFIG.colors.tertiary;
-      }
     } else {
       const emptyText = row.addText(
         `${source.config?.name || source.name} — no data`,
@@ -2462,14 +2360,6 @@ class DHBWTimetableDataSource extends DataSource {
     return !data.events || data.events.length === 0;
   }
 
-  getItemKey(item) {
-    return `${item.id}`;
-  }
-
-  getItemsFromData(data) {
-    return data?.events;
-  }
-
   async fetchData(widgetSize) {
     const response = await this.api.fetch(this.config.endpoint);
 
@@ -2478,7 +2368,8 @@ class DHBWTimetableDataSource extends DataSource {
     }
 
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    // Local date, not UTC — toISOString() would roll to tomorrow late evening.
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     let events = response.events
       .filter((e) => e.date >= todayStr)
@@ -2537,7 +2428,9 @@ class DHBWTimetableDataSource extends DataSource {
         if (lastDate !== null) {
           contentStack.addSpacer(sizes.spacing);
         }
-        const dateLabel = contentStack.addText(FormatUtils.formatDateLabel(event.date, today, tomorrow));
+        const dateLabel = contentStack.addText(
+          FormatUtils.formatDateLabel(event.date, today, tomorrow),
+        );
         dateLabel.font = Font.boldSystemFont(sizes.fontSize.secondary);
         dateLabel.textColor = CONFIG.colors.accent;
         contentStack.addSpacer(CONFIG.designTokens.compactSpacing);
@@ -2562,13 +2455,12 @@ class DHBWTimetableDataSource extends DataSource {
     const timeColumn = itemStack.addStack();
     timeColumn.layoutVertically();
     timeColumn.setPadding(0, 0, 0, 0);
-    timeColumn.size = new Size(
-      sizes.iconSize * 3,
-      0,
-    );
+    timeColumn.size = new Size(sizes.iconSize * 3, 0);
 
-    const startText = timeColumn.addText(FormatUtils.formatTime(event.startTime));
-    startText.font = Font.semiboldSystemFont(sizes.fontSize.secondary);
+    const startText = timeColumn.addText(
+      FormatUtils.formatTime(event.startTime),
+    );
+    startText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
     startText.textColor = CONFIG.colors.primary;
     startText.rightAlignText();
 
@@ -2580,7 +2472,12 @@ class DHBWTimetableDataSource extends DataSource {
     const divider = itemStack.addStack();
     divider.layoutVertically();
     divider.centerAlignContent();
-    divider.setPadding(0, CONFIG.designTokens.compactSpacing, 0, CONFIG.designTokens.compactSpacing);
+    divider.setPadding(
+      0,
+      CONFIG.designTokens.compactSpacing,
+      0,
+      CONFIG.designTokens.compactSpacing,
+    );
 
     const dot = divider.addStack();
     dot.size = new Size(sizes.fontSize.tertiary, sizes.fontSize.tertiary);
@@ -2598,7 +2495,7 @@ class DHBWTimetableDataSource extends DataSource {
     titleRow.centerAlignContent();
 
     const nameText = titleRow.addText(FormatUtils.truncate(event.name, 30));
-    nameText.font = Font.mediumSystemFont(sizes.fontSize.primary);
+    nameText.font = Font.boldSystemFont(sizes.fontSize.primary);
     nameText.textColor = CONFIG.colors.primary;
     nameText.lineLimit = 1;
 
@@ -2606,9 +2503,7 @@ class DHBWTimetableDataSource extends DataSource {
       titleRow.addSpacer(CONFIG.designTokens.compactSpacing);
       this.addBadge(titleRow, {
         text: event.type,
-        color:
-          CONFIG.colors.dhbwTypes[event.type] ||
-          CONFIG.colors.accent,
+        color: CONFIG.colors.dhbwTypes[event.type] || CONFIG.colors.accent,
         sizes,
       });
     }
@@ -2814,13 +2709,6 @@ class Mosaic {
       return this.createErrorWidget("No data available", widgetSize);
     }
 
-    if (this.dataSource.getItemsFromData(data)) {
-      const previousData = await CacheManager.loadPrevious(this.sourceName);
-      if (previousData) {
-        this.dataSource.markNewItems(data, previousData);
-      }
-    }
-
     this.dataSource.renderWidget(widget, data, widgetSize);
 
     this.addFooter(widget, sizes, usingCache, widgetSize);
@@ -2858,10 +2746,13 @@ class Mosaic {
     const sourceName = this.sourceName || "Widget";
     const msg = message.toLowerCase();
     let errorType = "Error";
-    if (msg.includes("timeout") || msg.includes("timed out")) errorType = "Timeout";
-    else if (msg.includes("401") || msg.includes("403")) errorType = "Auth Error";
+    if (msg.includes("timeout") || msg.includes("timed out"))
+      errorType = "Timeout";
+    else if (msg.includes("401") || msg.includes("403"))
+      errorType = "Auth Error";
     else if (msg.includes("429")) errorType = "Rate Limited";
-    else if (msg.includes("network") || msg.includes("connect")) errorType = "Network Error";
+    else if (msg.includes("network") || msg.includes("connect"))
+      errorType = "Network Error";
     const errorText = stack.addText(`${sourceName} ${errorType}`);
     errorText.font = Font.boldSystemFont(sizes.fontSize.primary);
     errorText.textColor = CONFIG.colors.primary;
@@ -2876,7 +2767,11 @@ class Mosaic {
       messageText.centerAlignText();
     }
 
-    stack.addSpacer(widgetSize === "small" ? CONFIG.designTokens.compactSpacing : sizes.spacing);
+    stack.addSpacer(
+      widgetSize === "small"
+        ? CONFIG.designTokens.compactSpacing
+        : sizes.spacing,
+    );
 
     const hintText = stack.addText(CONFIG.messages.tapRetry);
     hintText.font = Font.systemFont(sizes.fontSize.tertiary);

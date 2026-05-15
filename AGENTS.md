@@ -20,7 +20,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - **`RefreshManager`** — tracks fetch success/error per source, exponential backoff on refresh intervals (2^n, capped at 8x)
 - **`ConfigManager`** — loads/saves `widget-config.json` from iCloud, provides in-app setup UI via `Alert`
 - **`FormatUtils`** — static helpers: `truncate`, `formatNumber`, `formatTimeAgo`, `formatDuration`, `pluralize`, `formatTime`, `formatDateLabel`, `cleanTitle`, `stripHtml`
-- **`DataSource`** (base class) — subclasses must implement `fetchData(widgetSize)`, `isEmpty(data)`, `renderWidget(widget, data, widgetSize)`. Base provides `addHeader`, `addBadge`, `addNewDot`, `renderItemList`, and optional diff support via `getItemKey`/`getItemsFromData`
+- **`DataSource`** (base class) — subclasses must implement `fetchData(widgetSize)`, `isEmpty(data)`, `renderWidget(widget, data, widgetSize)`. Base provides `addHeader`, `addBadge`, `addSourceBadge`, `renderItemList`, `renderGrid`
 - **14 DataSource subclasses** — `BillboardDataSource`, `IMDbDataSource`, `SteamDataSource`, `HackerNewsDataSource`, `GitHubDataSource`, `WikipediaDataSource`, `TimelineDataSource`, `BookmarksDataSource`, `BooksDataSource`, `AstronomyDataSource`, `BlueskyDataSource`, `ActivityDataSource`, `StatusBoardDataSource`, `DHBWTimetableDataSource`
 - **`DataSourceFactory`** — parses `"source:extra"` parameter syntax, maps source name to class
 - **`Mosaic`** — entry point: loads config, creates data source, fetches data, renders widget
@@ -35,11 +35,10 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 2. Read `args.widgetParameter` (or `CONFIG.defaultSource`)
 3. `DataSourceFactory.create(sourceName, apiClient)`
 4. `fetchData(widgetSize)` → `RefreshManager.recordSuccess/Error` → `CacheManager.save`
-5. Diff mode: if source implements `getItemKey`/`getItemsFromData`, load previous cache and mark new items with `_isNew`
-6. `renderWidget(widget, data, widgetSize)` — green dot for `_isNew` items via `addNewDot()`
-7. Network failure → `CacheManager.load` fallback
-8. `addFooter` (medium: time only, large: time + offline text, small: none)
-9. In-app run: source picker with config setup UI for sources with editable fields
+5. `renderWidget(widget, data, widgetSize)`
+6. Network failure → `CacheManager.load` fallback
+7. `addFooter` (medium: time only, large: time + offline text, small: none)
+8. In-app run: source picker with config setup UI for sources with editable fields
 
 ### Source-specific behavior
 
@@ -56,9 +55,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - **Footers**: medium (compact, time only) and large (time + offline text). Small widgets have no footer.
 - **Error widget** is size-aware — always pass `widgetSize` to `createErrorWidget()`.
 - **Separators** (`renderItemList` with `useSeparators = true`) are for text-heavy list widgets without visual anchors. Avoid in multi-column layouts.
-- **Diff mode**: Sources that override `getItemKey(item)` and `getItemsFromData(data)` get automatic new-item detection. Billboard and Books are excluded (no key methods / no list data).
-- **`addNewDot()`** renders a green "●" for `_isNew` items — called explicitly in `renderItem`, not automatic.
-- **TimelineDataSource** and **ActivityDataSource** have `static sourceIcons` and `static sourceColors` mapping internal source types — these are class properties, not user config.
+- **TimelineDataSource** and **ActivityDataSource** have `static sourceIcons` and `static sourceColors` mapping internal source types — these are class properties, not user config. `DataSource.addSourceBadge()` reads these via `this.constructor.sourceIcons/sourceColors`.
 
 ## Constraints
 
