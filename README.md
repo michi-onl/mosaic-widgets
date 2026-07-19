@@ -29,28 +29,23 @@ Copy `widget-config.json` from this repo as a starting point, then fill in your 
 ```json
 {
   "version": 1,
-  "apiToken": "your-api-token",
   "sources": {}
 }
 ```
 
 **All user configuration belongs in widget-config.json.** Do not edit the JS file for settings.
 
-### 4. Add a widget to your home screen
+### 4. Set your API token
+
+Run the script directly inside Scriptable (tap it instead of adding as a widget), choose "API Token ⚙️" from the menu, and paste in your personal API token for api.michi.onl. It's required for most data sources. The token is stored in Keychain, not `widget-config.json` — it isn't synced across devices and doesn't appear in the config file.
+
+### 5. Add a widget to your home screen
 
 Long-press your home screen, tap +, search for Scriptable, pick a widget size. Edit the widget and set the Script to `Mosaic`. Set the Parameter to a source name (see below).
 
 ## Configuration reference
 
 Each field in `widget-config.json` explained.
-
-### apiToken
-
-Your personal API token for api.michi.onl. Required for most data sources.
-
-```json
-"apiToken": "your-api-token"
-```
 
 ### sources.steam
 
@@ -163,4 +158,4 @@ Set the Parameter field in the Scriptable widget settings on your home screen.
 
 ## In-app setup
 
-You can also configure sources by running the script directly inside Scriptable (tap it instead of adding as a widget). This opens a setup screen where you can edit fields for sources that need configuration. Changes save to `widget-config.json` and sync across your devices through iCloud.
+You can also configure sources by running the script directly inside Scriptable (tap it instead of adding as a widget). This opens a setup screen where you can edit fields for sources that need configuration, plus an "API Token ⚙️" entry for your api.michi.onl token. Source field changes save to `widget-config.json` and sync across your devices through iCloud; the API token is stored in Keychain and stays device-local.

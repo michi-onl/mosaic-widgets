@@ -24,7 +24,7 @@ const CONFIG = {
   // Default settings
   defaultSource: "billboard",
   apiBaseUrl: "https://api.michi.onl/api",
-  apiToken: "", // Set via widget-config.json, not here
+  apiToken: "", // Set via in-app "API Token" setup UI; stored in Keychain
 
   // Widget sizing configuration
   sizing: {
@@ -492,6 +492,7 @@ class RefreshManager {
 
 class ConfigManager {
   static configFile = "widget-config.json";
+  static keychainTokenKey = "mosaic_api_token";
   static _loaded = false;
 
   static getConfigPath() {
@@ -502,6 +503,17 @@ class ConfigManager {
   static async load() {
     if (this._loaded) return;
     this._loaded = true;
+
+    // API token lives in Keychain, not the iCloud-synced JSON file
+    try {
+      if (Keychain.contains(this.keychainTokenKey)) {
+        CONFIG.apiToken = Keychain.get(this.keychainTokenKey);
+      }
+    } catch (error) {
+      console.error(
+        `Failed to load API token from Keychain: ${error.message}`,
+      );
+    }
 
     try {
       const { fm, path } = this.getConfigPath();
@@ -516,8 +528,12 @@ class ConfigManager {
 
       if (!saved) return;
 
-      // Merge top-level settings
-      if (saved.apiToken) CONFIG.apiToken = saved.apiToken;
+      // Migrate a legacy plaintext apiToken out of the synced JSON into Keychain
+      if (saved.apiToken) {
+        if (!CONFIG.apiToken) this.setApiToken(saved.apiToken);
+        delete saved.apiToken;
+        fm.writeString(path, JSON.stringify(saved, null, 2));
+      }
 
       if (!saved.sources) return;
 
@@ -565,6 +581,35 @@ class ConfigManager {
     } catch (error) {
       console.error(`Failed to save iCloud config: ${error.message}`);
     }
+  }
+
+  static setApiToken(token) {
+    try {
+      if (token) {
+        Keychain.set(this.keychainTokenKey, token);
+      } else if (Keychain.contains(this.keychainTokenKey)) {
+        Keychain.remove(this.keychainTokenKey);
+      }
+      CONFIG.apiToken = token || "";
+    } catch (error) {
+      console.error(`Failed to save API token to Keychain: ${error.message}`);
+    }
+  }
+
+  static async showApiTokenSetupUI() {
+    const alert = new Alert();
+    alert.title = "API Token";
+    alert.message =
+      "Used to authenticate with api.michi.onl. Stored in Keychain, not synced via iCloud.";
+    alert.addTextField("API Token", CONFIG.apiToken || "");
+    alert.addAction("Save");
+    alert.addCancelAction("Cancel");
+
+    const result = await alert.presentAlert();
+    if (result === -1) return false;
+
+    this.setApiToken(alert.textFieldValue(0).trim());
+    return true;
   }
 
   static async showSetupUI(sourceName) {
@@ -1137,6 +1182,9 @@ class SteamDataSource extends DataSource {
   }
 
   async fetchData(widgetSize) {
+    if (!this.config.profiles || this.config.profiles.length === 0) {
+      throw new Error("Set steam profiles in CONFIG");
+    }
     const profiles = this.config.profiles.join(",");
     const response = await this.api.fetch(this.config.endpoint, { profiles });
 
@@ -1297,6 +1345,9 @@ class GitHubDataSource extends DataSource {
   }
 
   async fetchReleases(widgetSize) {
+    if (!this.config.repos || this.config.repos.length === 0) {
+      throw new Error("Set github repos in CONFIG");
+    }
     const repos = this.config.repos.join(",");
     const response = await this.api.fetch(this.config.endpoint, { repos });
     const limit = CONFIG.sizing[widgetSize].maxItems;
@@ -1661,6 +1712,9 @@ class BooksDataSource extends DataSource {
 
   async fetchData(widgetSize) {
     const isbn = this.isbn || this.config.defaultIsbn;
+    if (!isbn) {
+      throw new Error("Set defaultIsbn in CONFIG or use books:<isbn>");
+    }
     const booksApi = new APIClient(this.config.apiUrl);
     const response = await booksApi.fetch(isbn);
 
@@ -2267,31 +2321,36 @@ class StatusBoardDataSource extends DataSource {
     return { sources };
   }
 
+  // Every entry in CONFIG.sources (other than statusboard itself) needs an extractor
+  // here, or its Status Board row silently shows "no data" even with a successful fetch.
+  static topItemExtractors = {
+    billboard: (data) =>
+      data.items?.[0] && `${data.items[0].title} — ${data.items[0].subtitle}`,
+    imdb: (data) =>
+      data.movies?.[0] && `${data.movies[0].title} (${data.movies[0].year})`,
+    steam: (data) => {
+      const allGames = data.games || [];
+      return allGames[0] && allGames[0].name;
+    },
+    hackernews: (data) => data.stories?.[0]?.title,
+    github: (data) =>
+      data.releases?.[0] &&
+      `${data.releases[0].repo} ${data.releases[0].tagName}`,
+    wikipedia: (data) => data.edits?.[0]?.title,
+    timeline: (data) => data.events?.[0]?.title,
+    bookmarks: (data) => data.bookmarks?.[0]?.title,
+    bluesky: (data) =>
+      data.posts?.[0] && FormatUtils.truncate(data.posts[0].text, 60),
+    astronomy: () => "Astronomy data",
+    "dhbw-timetable": (data) => data.events?.[0]?.name,
+    books: (data) => data.title,
+    activity: (data) => data.items?.[0]?.title,
+  };
+
   extractTopItem(sourceName, data) {
     if (!data) return null;
-    const map = {
-      billboard: () =>
-        data.items?.[0] && `${data.items[0].title} — ${data.items[0].subtitle}`,
-      imdb: () =>
-        data.movies?.[0] && `${data.movies[0].title} (${data.movies[0].year})`,
-      steam: () => {
-        const allGames = data.games || [];
-        return allGames[0] && allGames[0].name;
-      },
-      hackernews: () => data.stories?.[0]?.title,
-      github: () =>
-        data.releases?.[0] &&
-        `${data.releases[0].repo} ${data.releases[0].tagName}`,
-      wikipedia: () => data.edits?.[0]?.title,
-      timeline: () => data.events?.[0]?.title,
-      bookmarks: () => data.bookmarks?.[0]?.title,
-      bluesky: () =>
-        data.posts?.[0] && FormatUtils.truncate(data.posts[0].text, 60),
-      astronomy: () => "Astronomy data",
-      "dhbw-timetable": () => data.events?.[0]?.name,
-    };
-    const extractor = map[sourceName];
-    return extractor ? extractor() || null : null;
+    const extractor = StatusBoardDataSource.topItemExtractors[sourceName];
+    return extractor ? extractor(data) || null : null;
   }
 
   isEmpty(data) {
@@ -2589,7 +2648,6 @@ class Mosaic {
     try {
       // Load iCloud config before creating API client and data source
       await ConfigManager.load();
-      this.apiClient = new APIClient(CONFIG.apiBaseUrl, CONFIG.apiToken);
 
       if (!config.runsInWidget) {
         const picked = await this.showSourcePicker();
@@ -2599,6 +2657,9 @@ class Mosaic {
         }
         this.sourceName = picked;
       }
+
+      // Created after the picker so an API token entered via the setup UI is used immediately
+      this.apiClient = new APIClient(CONFIG.apiBaseUrl, CONFIG.apiToken);
 
       this.dataSource = DataSourceFactory.create(
         this.sourceName,
@@ -2628,6 +2689,7 @@ class Mosaic {
     alert.title = "Mosaic";
     alert.message = "Choose a source to preview or configure.";
 
+    alert.addAction("API Token ⚙️");
     for (const name of sourceNames) {
       const src = CONFIG.sources[name];
       const hasFields = ConfigManager.getEditableFields(name).length > 0;
@@ -2638,7 +2700,12 @@ class Mosaic {
     const choice = await alert.presentAlert();
     if (choice === -1) return null;
 
-    const chosen = sourceNames[choice];
+    if (choice === 0) {
+      await ConfigManager.showApiTokenSetupUI();
+      return this.showSourcePicker();
+    }
+
+    const chosen = sourceNames[choice - 1];
 
     const editableFields = ConfigManager.getEditableFields(chosen);
     if (editableFields.length > 0) {
@@ -2841,5 +2908,39 @@ class Mosaic {
 // EXECUTION
 // ============================================================================
 
-const widget = new Mosaic();
-await widget.run();
+// Guarded (and wrapped in an IIFE rather than top-level await, which CommonJS can't
+// parse) so this file can be `require`'d from Node for testing — see test/. Scriptable
+// always defines `Script`, Node never does.
+if (typeof Script !== "undefined") {
+  (async () => {
+    const widget = new Mosaic();
+    await widget.run();
+  })();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    CONFIG,
+    FormatUtils,
+    APIClient,
+    CacheManager,
+    RefreshManager,
+    ConfigManager,
+    DataSourceFactory,
+    BillboardDataSource,
+    IMDbDataSource,
+    SteamDataSource,
+    HackerNewsDataSource,
+    GitHubDataSource,
+    WikipediaDataSource,
+    TimelineDataSource,
+    BookmarksDataSource,
+    BooksDataSource,
+    AstronomyDataSource,
+    BlueskyDataSource,
+    ActivityDataSource,
+    StatusBoardDataSource,
+    DHBWTimetableDataSource,
+    Mosaic,
+  };
+}

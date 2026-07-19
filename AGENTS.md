@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-iOS/macOS widgets for the [Scriptable](https://scriptable.app/) app. Single JavaScript file (`Mosaic.js`, ~3100 lines) that runs inside Scriptable on device. No build system, package manager, or test runner. Cannot be linted or executed in Node.js — relies on Scriptable globals (`ListWidget`, `Stack`, `SFSymbol`, `Font`, `Color`, `Request`, `FileManager`, `Keychain`, `Script`, `Location`, `config`, `args`).
+iOS/macOS widgets for the [Scriptable](https://scriptable.app/) app. Single JavaScript file (`Mosaic.js`, ~2900 lines) that runs inside Scriptable on device. No build system or package manager. Relies on Scriptable globals (`ListWidget`, `Stack`, `SFSymbol`, `Font`, `Color`, `Request`, `FileManager`, `Keychain`, `Script`, `Location`, `config`, `args`). The final "EXECUTION" block at the bottom of the file only runs when `Script` is defined, so the file can also be `require`'d from plain Node.
 
-Testing is interactive only: edit the JS file, copy to the Scriptable iCloud folder, run in the Scriptable app.
+Widget rendering is interactive only: edit the JS file, copy to the Scriptable iCloud folder, run in the Scriptable app. Pure logic (`FormatUtils`, `StatusBoardDataSource.topItemExtractors` coverage, per-source config validation) has a `node --test` suite under `test/` — run with `node --test`. `test/scriptable-stubs.js` stubs the handful of Scriptable globals touched at module-load time (currently just `Color`); extend it if a future test needs to exercise rendering.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - **`ImageCache`** — in-memory image cache with 5s timeout
 - **`CacheManager`** — JSON file cache in iCloud `widget-cache/` directory, 48h max age
 - **`RefreshManager`** — tracks fetch success/error per source, exponential backoff on refresh intervals (2^n, capped at 8x)
-- **`ConfigManager`** — loads/saves `widget-config.json` from iCloud, provides in-app setup UI via `Alert`
+- **`ConfigManager`** — loads/saves `widget-config.json` from iCloud (source-specific fields only), provides in-app setup UI via `Alert`. `apiToken` is stored in `Keychain`, not the iCloud JSON; `load()` migrates a legacy plaintext `apiToken` out of the JSON file on first run
 - **`FormatUtils`** — static helpers: `truncate`, `formatNumber`, `formatTimeAgo`, `formatDuration`, `pluralize`, `formatTime`, `formatDateLabel`, `cleanTitle`, `stripHtml`
 - **`DataSource`** (base class) — subclasses must implement `fetchData(widgetSize)`, `isEmpty(data)`, `renderWidget(widget, data, widgetSize)`. Base provides `addHeader`, `addBadge`, `addSourceBadge`, `renderItemList`, `renderGrid`
 - **14 DataSource subclasses** — `BillboardDataSource`, `IMDbDataSource`, `SteamDataSource`, `HackerNewsDataSource`, `GitHubDataSource`, `WikipediaDataSource`, `TimelineDataSource`, `BookmarksDataSource`, `BooksDataSource`, `AstronomyDataSource`, `BlueskyDataSource`, `ActivityDataSource`, `StatusBoardDataSource`, `DHBWTimetableDataSource`
@@ -60,6 +60,6 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 ## Constraints
 
 - Line 1–3 of `Mosaic.js` are Scriptable metadata comment (`icon-color`, `icon-glyph`). Must stay at the very top.
-- `widget-config.json` in the repo is a template. Real user config lives in the Scriptable iCloud folder and is never committed.
+- `widget-config.json` in the repo is a template. Real user config lives in the Scriptable iCloud folder and is never committed. `apiToken` is set via the in-app "API Token" menu (stored in `Keychain`), not this file.
 - `ConfigManager.getEditableFields()` defines which sources have in-app setup UI. Adding a new editable source requires updating this method.
 - `DataSourceFactory.sourceMap` is the registry of all source names to classes. Adding a source requires an entry here.

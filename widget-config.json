@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "apiToken": "your-api-token",
   "sources": {
     "steam": {
       "profiles": ["steam-username-1", "steam-username-2"]
