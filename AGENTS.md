@@ -56,6 +56,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - **Error widget** is size-aware — always pass `widgetSize` to `createErrorWidget()`.
 - **Separators** (`renderItemList` with `useSeparators = true`) are for text-heavy list widgets without visual anchors. Avoid in multi-column layouts.
 - **TimelineDataSource** and **ActivityDataSource** have `static sourceIcons` and `static sourceColors` mapping internal source types — these are class properties, not user config. `DataSource.addSourceBadge()` reads these via `this.constructor.sourceIcons/sourceColors`.
+- **Per-source header tint**: `CONFIG.sources.<name>.color` (a `Color`, usually the service's own brand color) tints that source's header icon via `addHeader()` and its Status Board row icon. Omit it for aggregator sources (Timeline, Activity, StatusBoard) and ones already color-coded per-row (DHBW Timetable) — falls back to `CONFIG.colors.accent`.
 
 ## Constraints
 

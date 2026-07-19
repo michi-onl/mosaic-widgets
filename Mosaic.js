@@ -114,8 +114,10 @@ const CONFIG = {
 
   // Shared design tokens for badges, radii, and spacing
   designTokens: {
-    cornerRadius: { badge: 4, icon: 3, cover: 6 },
-    badge: { paddingV: 2, paddingH: 4 },
+    // badge radius set generously above half the tallest badge's height so it
+    // always renders as a fully rounded pill, not a rounded rectangle
+    cornerRadius: { badge: 8, icon: 3, cover: 6 },
+    badge: { paddingV: 3, paddingH: 7 },
     compactSpacing: 4,
   },
 
@@ -130,6 +132,7 @@ const CONFIG = {
       name: "Billboard 200",
       endpoint: "/billboard-200",
       icon: "chart.bar.fill",
+      color: new Color("#FF2D55"),
       refreshHours: 24,
       urlScheme: "https://www.billboard.com/charts/billboard-200/",
     },
@@ -137,6 +140,7 @@ const CONFIG = {
       name: "IMDb Popular",
       endpoint: "/imdb",
       icon: "tv.fill",
+      color: new Color("#F5C518"), // IMDb's own brand yellow
       refreshHours: 12,
       urlScheme: "imdb://",
     },
@@ -144,6 +148,7 @@ const CONFIG = {
       name: "Steam Games",
       endpoint: "/steam-profiles",
       icon: "gamecontroller.fill",
+      color: new Color("#66C0F4"), // Steam's own brand blue
       refreshHours: 6,
       urlScheme: "steam://",
       profiles: [], // Set via widget-config.json
@@ -152,6 +157,7 @@ const CONFIG = {
       name: "Hacker News",
       endpoint: "/hackernews",
       icon: "newspaper.fill",
+      color: new Color("#FF6600"), // Hacker News' own brand orange
       refreshHours: 1,
       urlScheme: "https://news.ycombinator.com/",
     },
@@ -159,6 +165,7 @@ const CONFIG = {
       name: "GitHub Releases",
       endpoint: "/github-releases",
       icon: "arrow.down.circle",
+      color: new Color("#6e5494"), // matches TimelineDataSource/ActivityDataSource github badge color
       refreshHours: 6,
       urlScheme: "https://github.com/",
       repos: [], // Set via widget-config.json
@@ -167,6 +174,7 @@ const CONFIG = {
       name: "Wikipedia Edits",
       endpoint: "/wikipedia-watchlist",
       icon: "book.fill",
+      color: new Color("#636466"), // matches TimelineDataSource/ActivityDataSource wikipedia badge color
       refreshHours: 2,
       urlScheme: "https://wikipedia.org/",
       limit: 10,
@@ -176,6 +184,7 @@ const CONFIG = {
       name: "Timeline",
       endpoint: "/timeline",
       icon: "clock.arrow.circlepath",
+      // no color override: aggregates other sources, whose rows already carry their own color
       refreshHours: 1,
       urlScheme: "https://www.michi.onl/",
     },
@@ -183,6 +192,7 @@ const CONFIG = {
       name: "Bookmarks",
       endpoint: "/bookmarks",
       icon: "bookmark.fill",
+      color: new Color("#30B0C7"),
       refreshHours: 1,
       urlScheme: "https://linkding.michi.onl/",
     },
@@ -190,17 +200,20 @@ const CONFIG = {
       name: "DHBW Timetable",
       endpoint: "/dhbw-timetable",
       icon: "calendar.badge.clock",
+      // no color override: each event row is already color-coded by CONFIG.colors.dhbwTypes
       refreshHours: 1,
     },
     astronomy: {
       name: "Astronomy",
       icon: "moon.stars.fill",
+      color: new Color("#FFD700"), // matches CONFIG.colors.golden, ties into the golden-hour row
       refreshHours: 1,
       urlScheme: "weather://",
     },
     bluesky: {
       name: "Bluesky",
       icon: "bubble.left.fill",
+      color: new Color("#0285FF"), // Bluesky's own brand blue
       refreshHours: 1,
       urlScheme: "https://bsky.app/",
     },
@@ -208,18 +221,21 @@ const CONFIG = {
       name: "Activity",
       endpoint: "",
       icon: "bolt.fill",
+      // no color override: aggregates other sources, whose rows already carry their own color
       refreshHours: 1,
       urlScheme: "",
     },
     statusboard: {
       name: "Status Board",
       icon: "square.grid.2x2.fill",
+      // no color override: every row already carries its own source's color
       refreshHours: 1,
       urlScheme: "",
     },
     books: {
       name: "Currently Reading",
       icon: "book.fill",
+      color: new Color("#A0522D"),
       refreshHours: 24,
       urlScheme: "goodreads://",
       apiUrl: "https://www.googleapis.com/books/v1/volumes?q=isbn:",
@@ -832,7 +848,7 @@ class DataSource {
 
     const icon = headerStack.addImage(SFSymbol.named(this.config.icon).image);
     icon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
-    icon.tintColor = CONFIG.colors.accent;
+    icon.tintColor = this.config.color || CONFIG.colors.accent;
 
     headerStack.addSpacer(sizes.spacing);
 
@@ -937,24 +953,24 @@ class DataSource {
     }
 
     const columns = 2;
-    const itemsPerColumn = Math.ceil(items.length / columns);
 
     const gridStack = stack.addStack();
     gridStack.layoutHorizontally();
 
+    // Round-robin (row-major) column assignment instead of a contiguous split:
+    // keeps both columns within one item of each other in height, and for
+    // ranked lists (Billboard) reads top-to-bottom/left-to-right in rank order.
     for (let col = 0; col < columns; col++) {
       if (col > 0) gridStack.addSpacer(sizes.spacing * 2);
 
       const columnStack = gridStack.addStack();
       columnStack.layoutVertically();
 
-      const start = col * itemsPerColumn;
-      const end = Math.min(start + itemsPerColumn, items.length);
-
-      for (let i = start; i < end; i++) {
-        this.renderItem(columnStack, items[i], sizes, widgetSize);
-        if (i < end - 1) columnStack.addSpacer(sizes.spacing);
-      }
+      const colItems = items.filter((_, i) => i % columns === col);
+      colItems.forEach((item, i) => {
+        this.renderItem(columnStack, item, sizes, widgetSize);
+        if (i < colItems.length - 1) columnStack.addSpacer(sizes.spacing);
+      });
     }
   }
 }
@@ -1122,6 +1138,15 @@ class IMDbDataSource extends DataSource {
     };
   }
 
+  static getRatingColor(rating) {
+    if (rating === "") return CONFIG.colors.new;
+    const value = parseFloat(rating);
+    if (isNaN(value)) return CONFIG.colors.accent;
+    if (value >= 7) return CONFIG.colors.up;
+    if (value >= 5) return CONFIG.colors.warning;
+    return CONFIG.colors.down;
+  }
+
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
@@ -1171,6 +1196,7 @@ class IMDbDataSource extends DataSource {
     badgeStack.addSpacer(2);
     this.addBadge(badgeStack, {
       text: item.rating === "" ? "NEW" : String(item.rating ?? ""),
+      color: IMDbDataSource.getRatingColor(item.rating),
       sizes,
     });
   }
@@ -1391,6 +1417,11 @@ class GitHubDataSource extends DataSource {
     itemStack.centerAlignContent();
 
     if (item.url) itemStack.url = item.url;
+
+    if (item.authorAvatar) {
+      this.addCircularImage(itemStack, item.authorAvatar, sizes.iconSize);
+      itemStack.addSpacer(sizes.spacing);
+    }
 
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
@@ -2102,6 +2133,8 @@ class BlueskyDataSource extends DataSource {
         text: post.record?.text || "",
         author: post.author?.displayName || post.author?.handle || "",
         handle: post.author?.handle || "",
+        avatarUrl: post.author?.avatar || null,
+        avatar: null,
         createdAt: post.record?.createdAt || post.indexedAt,
         likes: post.likeCount || 0,
         reposts: post.repostCount || 0,
@@ -2110,6 +2143,8 @@ class BlueskyDataSource extends DataSource {
         isRepost: !!item.reason,
       };
     });
+
+    await DataSource.preloadImages(posts, "avatarUrl", "avatar");
 
     return { posts };
   }
@@ -2136,6 +2171,11 @@ class BlueskyDataSource extends DataSource {
     itemStack.centerAlignContent();
 
     if (item.url) itemStack.url = item.url;
+
+    if (item.avatar) {
+      this.addCircularImage(itemStack, item.avatar, sizes.iconSize);
+      itemStack.addSpacer(sizes.spacing);
+    }
 
     const textStack = itemStack.addStack();
     textStack.layoutVertically();
@@ -2387,7 +2427,7 @@ class StatusBoardDataSource extends DataSource {
     const iconName = source.config?.icon || "questionmark.circle";
     const icon = row.addImage(SFSymbol.named(iconName).image);
     icon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
-    icon.tintColor = CONFIG.colors.accent;
+    icon.tintColor = source.config?.color || CONFIG.colors.accent;
     row.addSpacer(sizes.spacing);
 
     if (source.error) {
@@ -2496,7 +2536,7 @@ class DHBWTimetableDataSource extends DataSource {
         lastDate = event.date;
       }
 
-      this.renderItem(contentStack, event, sizes);
+      this.renderItem(contentStack, event, sizes, widgetSize);
 
       if (index < data.events.length - 1) {
         const nextEvent = data.events[index + 1];
@@ -2528,21 +2568,25 @@ class DHBWTimetableDataSource extends DataSource {
     endText.textColor = CONFIG.colors.secondary;
     endText.rightAlignText();
 
-    const divider = itemStack.addStack();
-    divider.layoutVertically();
-    divider.centerAlignContent();
-    divider.setPadding(
-      0,
-      CONFIG.designTokens.compactSpacing,
-      0,
-      CONFIG.designTokens.compactSpacing,
-    );
+    // The color dot and the type badge below both encode event.type by color;
+    // on a small widget that's redundant, so only the badge carries it there.
+    if (widgetSize !== "small") {
+      const divider = itemStack.addStack();
+      divider.layoutVertically();
+      divider.centerAlignContent();
+      divider.setPadding(
+        0,
+        CONFIG.designTokens.compactSpacing,
+        0,
+        CONFIG.designTokens.compactSpacing,
+      );
 
-    const dot = divider.addStack();
-    dot.size = new Size(sizes.fontSize.tertiary, sizes.fontSize.tertiary);
-    dot.cornerRadius = sizes.fontSize.tertiary / 2;
-    dot.backgroundColor =
-      CONFIG.colors.dhbwTypes[event.type] || CONFIG.colors.accent;
+      const dot = divider.addStack();
+      dot.size = new Size(sizes.fontSize.tertiary, sizes.fontSize.tertiary);
+      dot.cornerRadius = sizes.fontSize.tertiary / 2;
+      dot.backgroundColor =
+        CONFIG.colors.dhbwTypes[event.type] || CONFIG.colors.accent;
+    }
 
     itemStack.addSpacer(CONFIG.designTokens.compactSpacing);
 
