@@ -79,7 +79,7 @@ class DHBWTimetableDataSource extends DataSource {
           FormatUtils.formatDateLabel(event.date, today, tomorrow),
         );
         dateLabel.font = Font.semiboldSystemFont(sizes.fontSize.secondary);
-        dateLabel.textColor = CONFIG.colors.accent;
+        dateLabel.textColor = CONFIG.colors.secondaryLabel;
         contentStack.addSpacer(CONFIG.designTokens.compactSpacing);
         lastDate = event.date;
       }

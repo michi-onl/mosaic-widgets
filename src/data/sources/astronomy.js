@@ -3,6 +3,7 @@ const { APIClient } = require("../../core/api-client.js");
 const { CacheManager } = require("../../core/cache-manager.js");
 const { FormatUtils } = require("../../core/format-utils.js");
 const { DataSource } = require("../data-source.js");
+const { typography } = require("../../design-system.js");
 
 class AstronomyDataSource extends DataSource {
   static moonPhases = [
@@ -175,8 +176,8 @@ class AstronomyDataSource extends DataSource {
     row.addSpacer(sizes.spacing);
 
     const pctText = row.addText(`${Math.round(data.moonPhase * 100)}%`);
-    pctText.font = Font.systemFont(sizes.fontSize.tertiary);
-    pctText.textColor = CONFIG.colors.secondaryLabel;
+    pctText.font = typography.footnote(sizes);
+    pctText.textColor = CONFIG.colors.tertiaryLabel;
   }
 
   renderUvRow(stack, data, sizes) {
@@ -190,7 +191,7 @@ class AstronomyDataSource extends DataSource {
     row.addSpacer(CONFIG.designTokens.compactSpacing);
 
     const label = row.addText("UV Index");
-    label.font = Font.systemFont(sizes.fontSize.secondary);
+    label.font = typography.body(sizes);
     label.textColor = CONFIG.colors.secondaryLabel;
     row.addSpacer(sizes.spacing);
 
@@ -220,8 +221,8 @@ class AstronomyDataSource extends DataSource {
     const eveningText = `${FormatUtils.formatTime(data.goldenEvening.start)}–${FormatUtils.formatTime(data.goldenEvening.end)}`;
 
     const text = row.addText(`↑ ${morningText}  ↓ ${eveningText}`);
-    text.font = Font.systemFont(sizes.fontSize.secondary);
-    text.textColor = CONFIG.colors.label;
+    text.font = typography.footnote(sizes);
+    text.textColor = CONFIG.colors.secondaryLabel;
   }
 
   renderTemperatureRow(stack, data, sizes) {

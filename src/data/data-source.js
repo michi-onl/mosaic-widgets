@@ -1,6 +1,6 @@
 const { CONFIG } = require("../config.js");
 const { ImageCache } = require("../core/image-cache.js");
-const { addSeparator, addTag, typography } = require("../design-system.js");
+const { addTag, typography } = require("../design-system.js");
 
 class DataSource {
   constructor(config, apiClient) {
@@ -73,21 +73,11 @@ class DataSource {
     img.cornerRadius = size / 2;
   }
 
-  renderItemList(
-    stack,
-    items,
-    sizes,
-    useSeparators = false,
-    widgetSize = "medium",
-  ) {
+  renderItemList(stack, items, sizes, widgetSize = "medium") {
     items.forEach((item, index) => {
       this.renderItem(stack, item, sizes, widgetSize);
       if (index < items.length - 1) {
         stack.addSpacer(sizes.spacing);
-        if (useSeparators) {
-          addSeparator(stack);
-          stack.addSpacer(sizes.spacing);
-        }
       }
     });
   }

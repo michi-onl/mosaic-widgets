@@ -49,7 +49,7 @@ class SteamDataSource extends DataSource {
 
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
-    this.renderItemList(contentStack, data.games, sizes, false, widgetSize);
+    this.renderItemList(contentStack, data.games, sizes, widgetSize);
   }
 
   renderItem(stack, game, sizes, widgetSize = "medium") {

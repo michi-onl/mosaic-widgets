@@ -76,7 +76,7 @@ class WikipediaDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.edits, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.edits, sizes, widgetSize);
   }
 
   renderItem(stack, edit, sizes, widgetSize) {

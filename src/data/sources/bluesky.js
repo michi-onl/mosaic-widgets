@@ -57,7 +57,7 @@ class BlueskyDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.posts, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.posts, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize) {

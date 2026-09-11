@@ -52,7 +52,7 @@ class BookmarksDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.bookmarks, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.bookmarks, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize) {

@@ -55,7 +55,7 @@ class TimelineDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.events, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.events, sizes, widgetSize);
   }
 
   renderItem(stack, event, sizes, widgetSize) {

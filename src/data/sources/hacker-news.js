@@ -35,7 +35,7 @@ class HackerNewsDataSource extends DataSource {
 
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
-    this.renderItemList(contentStack, data.stories, sizes, false, widgetSize);
+    this.renderItemList(contentStack, data.stories, sizes, widgetSize);
   }
 
   renderItem(stack, story, sizes, widgetSize) {

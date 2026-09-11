@@ -108,18 +108,37 @@ class IMDbDataSource extends DataSource {
     titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
-    const metaText = textStack.addText(item.subtitle);
+    const metaRow = textStack.addStack();
+    metaRow.layoutHorizontally();
+    metaRow.centerAlignContent();
+
+    const metaText = metaRow.addText(item.subtitle);
     metaText.font = Font.systemFont(sizes.fontSize.secondary);
     metaText.textColor = CONFIG.colors.secondaryLabel;
     metaText.lineLimit = 1;
 
-    const badgeStack = textStack.addStack();
-    badgeStack.addSpacer(2);
-    this.addBadge(badgeStack, {
-      text: item.rating === "" ? "NEW" : String(item.rating ?? ""),
-      color: IMDbDataSource.getRatingColor(item.rating),
-      sizes,
-    });
+    if (item.rating === "") {
+      metaRow.addSpacer(sizes.spacing);
+      const newText = metaRow.addText("NEW");
+      newText.font = Font.mediumSystemFont(sizes.fontSize.tertiary);
+      newText.textColor = CONFIG.colors.new;
+    } else if (item.rating !== undefined && item.rating !== null) {
+      const ratingColor = IMDbDataSource.getRatingColor(item.rating);
+      metaRow.addSpacer(sizes.spacing);
+
+      const star = metaRow.addImage(SFSymbol.named("star.fill").image);
+      star.imageSize = new Size(
+        sizes.fontSize.tertiary,
+        sizes.fontSize.tertiary,
+      );
+      star.tintColor = ratingColor;
+
+      metaRow.addSpacer(2);
+
+      const ratingText = metaRow.addText(String(item.rating));
+      ratingText.font = Font.mediumSystemFont(sizes.fontSize.tertiary);
+      ratingText.textColor = ratingColor;
+    }
   }
 }
 

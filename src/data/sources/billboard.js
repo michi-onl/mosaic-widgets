@@ -37,10 +37,11 @@ class BillboardDataSource extends DataSource {
   }
 
   static getTrend(current, lastWeek) {
-    if (lastWeek === 0) return { char: "★", color: CONFIG.colors.new };
-    if (current < lastWeek) return { char: "↑", color: CONFIG.colors.up };
-    if (current > lastWeek) return { char: "↓", color: CONFIG.colors.down };
-    return { char: "−", color: CONFIG.colors.unchanged };
+    if (lastWeek === 0) return { symbol: "star.fill", color: CONFIG.colors.new };
+    if (current < lastWeek) return { symbol: "arrow.up", color: CONFIG.colors.up };
+    if (current > lastWeek)
+      return { symbol: "arrow.down", color: CONFIG.colors.down };
+    return { symbol: "minus", color: CONFIG.colors.unchanged };
   }
 
   renderWidget(widget, data, widgetSize) {
@@ -81,28 +82,26 @@ class BillboardDataSource extends DataSource {
     titleText.lineLimit = 1;
 
     titleRow.addSpacer(sizes.spacing);
-    const { char, color } = BillboardDataSource.getTrend(
+    const { symbol, color } = BillboardDataSource.getTrend(
       item.position,
       item.metadata.last_week,
     );
-    const indicatorText = titleRow.addText(char);
-    indicatorText.font = Font.systemFont(sizes.fontSize.secondary);
-    indicatorText.textColor = color;
+    const indicator = titleRow.addImage(SFSymbol.named(symbol).image);
+    indicator.imageSize = new Size(
+      sizes.fontSize.tertiary,
+      sizes.fontSize.tertiary,
+    );
+    indicator.tintColor = color;
+
+    const subtitleParts = [item.subtitle];
+    if (item.metadata.weeks) subtitleParts.push(`${item.metadata.weeks}w`);
 
     const subtitleText = textStack.addText(
-      FormatUtils.truncate(item.subtitle, 30),
+      FormatUtils.truncate(subtitleParts.join(" · "), 32),
     );
     subtitleText.font = Font.systemFont(sizes.fontSize.secondary);
     subtitleText.textColor = CONFIG.colors.secondaryLabel;
     subtitleText.lineLimit = 1;
-
-    if (item.metadata.weeks) {
-      const metaText = textStack.addText(
-        FormatUtils.pluralize(item.metadata.weeks, "week"),
-      );
-      metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-      metaText.textColor = CONFIG.colors.tertiaryLabel;
-    }
 
     itemStack.addSpacer();
   }

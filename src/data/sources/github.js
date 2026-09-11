@@ -51,7 +51,7 @@ class GitHubDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.releases, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.releases, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize) {

@@ -78,7 +78,7 @@ class ActivityDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    this.renderItemList(contentStack, data.items, sizes, true, widgetSize);
+    this.renderItemList(contentStack, data.items, sizes, widgetSize);
   }
 
   renderItem(stack, item, sizes, widgetSize) {
