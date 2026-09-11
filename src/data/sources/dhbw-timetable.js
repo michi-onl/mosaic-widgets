@@ -69,8 +69,10 @@ class DHBWTimetableDataSource extends DataSource {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const events = data.events.slice(0, this.maxItemsThatFit(sizes, widgetSize));
+
     let lastDate = null;
-    data.events.forEach((event, index) => {
+    events.forEach((event, index) => {
       if (event.date !== lastDate) {
         if (lastDate !== null) {
           contentStack.addSpacer(sizes.spacing);
@@ -86,13 +88,23 @@ class DHBWTimetableDataSource extends DataSource {
 
       this.renderItem(contentStack, event, sizes, widgetSize);
 
-      if (index < data.events.length - 1) {
-        const nextEvent = data.events[index + 1];
+      if (index < events.length - 1) {
+        const nextEvent = events[index + 1];
         if (nextEvent.date === event.date) {
           contentStack.addSpacer(CONFIG.designTokens.compactSpacing);
         }
       }
     });
+  }
+
+  // Time column (secondary + tertiary) vs title (primary) + detail (tertiary).
+  rowHeight(sizes) {
+    return (
+      Math.max(
+        sizes.fontSize.secondary + sizes.fontSize.tertiary,
+        sizes.fontSize.primary + sizes.fontSize.tertiary,
+      ) * 1.2
+    );
   }
 
   renderItem(stack, event, sizes, widgetSize) {

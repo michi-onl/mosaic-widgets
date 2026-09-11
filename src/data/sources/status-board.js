@@ -111,12 +111,21 @@ class StatusBoardDataSource extends DataSource {
     const contentStack = widget.addStack();
     contentStack.layoutVertically();
 
-    data.sources.forEach((source, index) => {
+    const visible = data.sources.slice(
+      0,
+      this.maxItemsThatFit(sizes, widgetSize),
+    );
+    visible.forEach((source, index) => {
       this.renderSourceRow(contentStack, source, sizes, widgetSize);
-      if (index < data.sources.length - 1) {
+      if (index < visible.length - 1) {
         contentStack.addSpacer(sizes.spacing);
       }
     });
+  }
+
+  // One semibold line vs the leading source icon.
+  rowHeight(sizes) {
+    return Math.max(sizes.iconSize, sizes.fontSize.primary * 1.2);
   }
 
   renderSourceRow(stack, source, sizes, widgetSize) {

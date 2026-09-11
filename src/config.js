@@ -63,7 +63,19 @@ const CONFIG = {
   apiBaseUrl: "https://api.michi.onl/api",
   apiToken: "", // Set via in-app "API Token" setup UI; stored in Keychain
 
+  // Drawable canvas per Scriptable/Apple widget family, in points. Used to
+  // derive how many rows actually fit (DataSource.maxItemsThatFit); the overflow
+  // test in test/overflow.test.js reads this same map.
+  widgetCanvas: {
+    small: { width: 158, height: 158 },
+    medium: { width: 338, height: 158 },
+    large: { width: 338, height: 354 },
+    extraLarge: { width: 716, height: 354 },
+  },
+
   // Widget sizing. Type scale follows SF text styles, compacted for widgets.
+  // `maxItems` is only the network/fetch ceiling — the renderer fits fewer when
+  // rows are tall (see DataSource.maxItemsThatFit).
   sizing: {
     small: {
       maxItems: 4,
@@ -73,18 +85,25 @@ const CONFIG = {
       padding: 14,
     },
     medium: {
-      maxItems: 4,
+      maxItems: 6,
       fontSize: { title: 15, primary: 15, secondary: 13, tertiary: 11, caption: 10 },
       iconSize: 16,
       spacing: 8,
       padding: 16,
     },
     large: {
-      maxItems: 12,
+      maxItems: 14,
       fontSize: { title: 17, primary: 17, secondary: 15, tertiary: 13, caption: 11 },
       iconSize: 18,
       spacing: 10,
       padding: 18,
+    },
+    extraLarge: {
+      maxItems: 18,
+      fontSize: { title: 18, primary: 18, secondary: 16, tertiary: 14, caption: 12 },
+      iconSize: 20,
+      spacing: 10,
+      padding: 20,
     },
   },
 
@@ -94,16 +113,27 @@ const CONFIG = {
       small: { width: 32, height: 32, cornerRadius: 4 },
       medium: { width: 40, height: 40, cornerRadius: 4 },
       large: { width: 48, height: 48, cornerRadius: 6 },
+      extraLarge: { width: 52, height: 52, cornerRadius: 6 },
     },
     gridTall: {
       small: { width: 28, height: 42, cornerRadius: 4 },
-      medium: { width: 36, height: 54, cornerRadius: 4 },
+      medium: { width: 32, height: 48, cornerRadius: 4 },
       large: { width: 44, height: 66, cornerRadius: 6 },
+      extraLarge: { width: 48, height: 72, cornerRadius: 6 },
+    },
+    // Square art (Billboard album covers). Same heights as gridTall so the row
+    // budget is unchanged; the extra width fills the column better.
+    gridSquare: {
+      small: { width: 42, height: 42, cornerRadius: 4 },
+      medium: { width: 48, height: 48, cornerRadius: 4 },
+      large: { width: 66, height: 66, cornerRadius: 6 },
+      extraLarge: { width: 72, height: 72, cornerRadius: 6 },
     },
     card: {
       small: { width: 40, height: 60, cornerRadius: 6 },
-      medium: { width: 60, height: 90, cornerRadius: 6 },
+      medium: { width: 54, height: 82, cornerRadius: 6 },
       large: { width: 80, height: 120, cornerRadius: 8 },
+      extraLarge: { width: 96, height: 144, cornerRadius: 8 },
     },
   },
 
@@ -117,7 +147,6 @@ const CONFIG = {
   },
 
   messages: {
-    offline: "Offline",
     tapRetry: "Tap to try again",
   },
 

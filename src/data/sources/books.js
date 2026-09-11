@@ -60,8 +60,8 @@ class BooksDataSource extends DataSource {
     const bodyStack = widget.addStack();
     bodyStack.layoutHorizontally();
 
-    // Book cover (not on small widget unless no room for info)
-    if (widgetSize !== "small" && data.coverImage) {
+    // Book cover (left-aligned on every size; the small widget's cover is just smaller)
+    if (data.coverImage) {
       const coverStack = bodyStack.addStack();
       coverStack.layoutVertically();
       coverStack.centerAlignContent();
@@ -79,11 +79,13 @@ class BooksDataSource extends DataSource {
     // Book info
     const infoStack = bodyStack.addStack();
     infoStack.layoutVertically();
+    infoStack.addSpacer();
 
     const titleText = infoStack.addText(FormatUtils.truncate(data.title, 40));
     titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
     titleText.textColor = CONFIG.colors.label;
-    titleText.lineLimit = 2;
+    titleText.lineLimit =
+      widgetSize === "large" || widgetSize === "extraLarge" ? 2 : 1;
 
     const authorsText = infoStack.addText(data.authors);
     authorsText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
@@ -105,22 +107,10 @@ class BooksDataSource extends DataSource {
       );
       metaText.font = Font.systemFont(sizes.fontSize.tertiary);
       metaText.textColor = CONFIG.colors.tertiaryLabel;
+      metaText.lineLimit = 1;
     }
 
-    // Small widget: show cover below text
-    if (widgetSize === "small" && data.coverImage) {
-      infoStack.addSpacer(sizes.spacing);
-
-      const coverStack = infoStack.addStack();
-      coverStack.centerAlignContent();
-
-      const cover = coverStack.addImage(data.coverImage);
-      cover.cornerRadius = CONFIG.designTokens.cornerRadius.cover;
-      cover.centerAlignImage();
-      const smallImgSize = CONFIG.images.card.small;
-      cover.imageSize = new Size(smallImgSize.width, smallImgSize.height);
-    }
-
+    infoStack.addSpacer();
     bodyStack.addSpacer();
 
     // Goodreads icon (medium and large)

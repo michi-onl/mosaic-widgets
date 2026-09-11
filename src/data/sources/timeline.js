@@ -48,7 +48,8 @@ class TimelineDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    const headerOptions = this.category ? { subtitle: this.category } : {};
+    const headerOptions =
+      this.category && widgetSize !== "small" ? { subtitle: this.category } : {};
     this.addHeader(widget, "Timeline", sizes, headerOptions);
     widget.addSpacer(sizes.spacing);
 
@@ -56,6 +57,11 @@ class TimelineDataSource extends DataSource {
     contentStack.layoutVertically();
 
     this.renderItemList(contentStack, data.events, sizes, widgetSize);
+  }
+
+  // Up to two lines of title (lineLimit 2) + the time-ago line.
+  rowHeight(sizes) {
+    return (2 * sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
   }
 
   renderItem(stack, event, sizes, widgetSize) {

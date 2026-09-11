@@ -48,10 +48,34 @@ class BillboardDataSource extends DataSource {
     const sizes = CONFIG.sizing[widgetSize];
 
     this.addHeader(widget, data.title, sizes);
-    widget.addSpacer(sizes.spacing);
+    widget.addSpacer(this.headerSpacing(sizes));
 
     const contentStack = widget.addStack();
     this.renderGrid(contentStack, data.items, sizes, widgetSize);
+  }
+
+  // Album covers are square, so use the square art token (same height, more
+  // width than the default portrait thumbnail).
+  coverImageSize(widgetSize) {
+    return CONFIG.images.gridSquare[widgetSize];
+  }
+
+  // Grid sources pack rows with the tighter spacing token.
+  headerSpacing() {
+    return CONFIG.designTokens.compactSpacing;
+  }
+
+  rowSpacing() {
+    return CONFIG.designTokens.compactSpacing;
+  }
+
+  // Square cover vs title (primary) + artist (secondary).
+  rowHeight(sizes, widgetSize) {
+    const cover = this.coverImageSize(widgetSize).height;
+    return Math.max(
+      cover,
+      (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2,
+    );
   }
 
   renderItem(stack, item, sizes, widgetSize = "medium") {
@@ -61,7 +85,7 @@ class BillboardDataSource extends DataSource {
 
     // Cover image
     if (item.cover) {
-      const imgSize = CONFIG.images.gridTall[widgetSize];
+      const imgSize = this.coverImageSize(widgetSize);
       const coverImg = itemStack.addImage(item.cover);
       coverImg.imageSize = new Size(imgSize.width, imgSize.height);
       coverImg.cornerRadius = imgSize.cornerRadius;

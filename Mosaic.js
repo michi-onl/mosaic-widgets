@@ -70,7 +70,18 @@ var require_config = __commonJS({
       apiBaseUrl: "https://api.michi.onl/api",
       apiToken: "",
       // Set via in-app "API Token" setup UI; stored in Keychain
+      // Drawable canvas per Scriptable/Apple widget family, in points. Used to
+      // derive how many rows actually fit (DataSource.maxItemsThatFit); the overflow
+      // test in test/overflow.test.js reads this same map.
+      widgetCanvas: {
+        small: { width: 158, height: 158 },
+        medium: { width: 338, height: 158 },
+        large: { width: 338, height: 354 },
+        extraLarge: { width: 716, height: 354 }
+      },
       // Widget sizing. Type scale follows SF text styles, compacted for widgets.
+      // `maxItems` is only the network/fetch ceiling — the renderer fits fewer when
+      // rows are tall (see DataSource.maxItemsThatFit).
       sizing: {
         small: {
           maxItems: 4,
@@ -80,18 +91,25 @@ var require_config = __commonJS({
           padding: 14
         },
         medium: {
-          maxItems: 4,
+          maxItems: 6,
           fontSize: { title: 15, primary: 15, secondary: 13, tertiary: 11, caption: 10 },
           iconSize: 16,
           spacing: 8,
           padding: 16
         },
         large: {
-          maxItems: 12,
+          maxItems: 14,
           fontSize: { title: 17, primary: 17, secondary: 15, tertiary: 13, caption: 11 },
           iconSize: 18,
           spacing: 10,
           padding: 18
+        },
+        extraLarge: {
+          maxItems: 18,
+          fontSize: { title: 18, primary: 18, secondary: 16, tertiary: 14, caption: 12 },
+          iconSize: 20,
+          spacing: 10,
+          padding: 20
         }
       },
       // Standardized image sizes per layout template
@@ -99,17 +117,28 @@ var require_config = __commonJS({
         grid: {
           small: { width: 32, height: 32, cornerRadius: 4 },
           medium: { width: 40, height: 40, cornerRadius: 4 },
-          large: { width: 48, height: 48, cornerRadius: 6 }
+          large: { width: 48, height: 48, cornerRadius: 6 },
+          extraLarge: { width: 52, height: 52, cornerRadius: 6 }
         },
         gridTall: {
           small: { width: 28, height: 42, cornerRadius: 4 },
-          medium: { width: 36, height: 54, cornerRadius: 4 },
-          large: { width: 44, height: 66, cornerRadius: 6 }
+          medium: { width: 32, height: 48, cornerRadius: 4 },
+          large: { width: 44, height: 66, cornerRadius: 6 },
+          extraLarge: { width: 48, height: 72, cornerRadius: 6 }
+        },
+        // Square art (Billboard album covers). Same heights as gridTall so the row
+        // budget is unchanged; the extra width fills the column better.
+        gridSquare: {
+          small: { width: 42, height: 42, cornerRadius: 4 },
+          medium: { width: 48, height: 48, cornerRadius: 4 },
+          large: { width: 66, height: 66, cornerRadius: 6 },
+          extraLarge: { width: 72, height: 72, cornerRadius: 6 }
         },
         card: {
           small: { width: 40, height: 60, cornerRadius: 6 },
-          medium: { width: 60, height: 90, cornerRadius: 6 },
-          large: { width: 80, height: 120, cornerRadius: 8 }
+          medium: { width: 54, height: 82, cornerRadius: 6 },
+          large: { width: 80, height: 120, cornerRadius: 8 },
+          extraLarge: { width: 96, height: 144, cornerRadius: 8 }
         }
       },
       colors: COLORS,
@@ -120,7 +149,6 @@ var require_config = __commonJS({
         compactSpacing: 4
       },
       messages: {
-        offline: "Offline",
         tapRetry: "Tap to try again"
       },
       // Source-specific configuration
@@ -797,12 +825,35 @@ var require_data_source = __commonJS({
         const titleText = headerStack.addText(title);
         titleText.font = typography.title(sizes);
         titleText.textColor = CONFIG2.colors.label;
+        titleText.lineLimit = 1;
         if (options.subtitle) {
           headerStack.addSpacer(sizes.spacing);
           const sub = headerStack.addText(options.subtitle);
           sub.font = Font.systemFont(sizes.fontSize.tertiary);
           sub.textColor = CONFIG2.colors.secondaryLabel;
+          sub.lineLimit = 1;
         }
+        headerStack.addSpacer();
+        this.addRefreshTime(headerStack, sizes);
+      }
+      // Last-refresh timestamp (and an offline glyph when serving from cache),
+      // right-aligned in the header so it costs no extra vertical space.
+      addRefreshTime(stack, sizes) {
+        if (this.usingCache) {
+          const offlineIcon = stack.addImage(SFSymbol.named("icloud.slash").image);
+          offlineIcon.imageSize = new Size(
+            sizes.fontSize.caption,
+            sizes.fontSize.caption
+          );
+          offlineIcon.tintColor = CONFIG2.colors.warning;
+          stack.addSpacer(CONFIG2.designTokens.compactSpacing);
+        }
+        const now = /* @__PURE__ */ new Date();
+        const hours = now.getHours().toString().padStart(2, "0");
+        const minutes = now.getMinutes().toString().padStart(2, "0");
+        const timeText = stack.addText(`${hours}:${minutes}`);
+        timeText.font = typography.caption(sizes);
+        timeText.textColor = CONFIG2.colors.tertiaryLabel;
       }
       addBadge(parentStack, { text, icon, color, sizes }) {
         return addTag(parentStack, { text, icon, color, sizes });
@@ -830,35 +881,78 @@ var require_data_source = __commonJS({
         img.imageSize = new Size(size, size);
         img.cornerRadius = size / 2;
       }
+      // --- Space budgeting ----------------------------------------------------
+      // A ListWidget clips/ellipsizes once its intrinsic height exceeds the
+      // family's drawable canvas, so each source only renders as many rows as fit.
+      // Sources with taller rows (multi-line titles, avatar/poster rows) override
+      // `rowHeight` to declare that.
+      headerHeight(sizes) {
+        const titleLine = sizes.fontSize.title * 1.2;
+        return Math.max(sizes.iconSize, titleLine) + this.headerSpacing(sizes);
+      }
+      // Gap between the header and the item area (grid sources tighten it).
+      headerSpacing(sizes) {
+        return sizes.spacing;
+      }
+      // Gap between item rows (grid sources tighten it).
+      rowSpacing(sizes) {
+        return sizes.spacing;
+      }
+      // Leading thumbnail for a row. Portrait by default; sources whose art is a
+      // different aspect (e.g. square album covers) return their own size.
+      coverImageSize(widgetSize) {
+        return CONFIG2.images.gridTall[widgetSize];
+      }
+      // Vertical room left for the item area after widget padding and header.
+      bodyHeight(sizes, widgetSize) {
+        const canvas = CONFIG2.widgetCanvas[widgetSize] || CONFIG2.widgetCanvas.medium;
+        return canvas.height - 2 * sizes.padding - this.headerHeight(sizes);
+      }
+      // Intrinsic minimum height of one row, in points.
+      rowHeight(sizes) {
+        return (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2;
+      }
+      maxItemsThatFit(sizes, widgetSize) {
+        const body = this.bodyHeight(sizes, widgetSize);
+        const row = this.rowHeight(sizes, widgetSize) + this.rowSpacing(sizes);
+        return Math.max(1, Math.floor((body + this.rowSpacing(sizes)) / row));
+      }
       renderItemList(stack, items, sizes, widgetSize = "medium") {
-        items.forEach((item, index) => {
+        const visible = items.slice(0, this.maxItemsThatFit(sizes, widgetSize));
+        const gap = this.rowSpacing(sizes);
+        visible.forEach((item, index) => {
           this.renderItem(stack, item, sizes, widgetSize);
-          if (index < items.length - 1) {
-            stack.addSpacer(sizes.spacing);
+          if (index < visible.length - 1) {
+            stack.addSpacer(gap);
           }
         });
       }
       renderGrid(stack, items, sizes, widgetSize) {
-        if (widgetSize === "small") {
+        const columns = widgetSize === "small" ? 1 : widgetSize === "extraLarge" ? 3 : 2;
+        const gap = this.rowSpacing(sizes);
+        const visible = items.slice(
+          0,
+          this.maxItemsThatFit(sizes, widgetSize) * columns
+        );
+        if (columns === 1) {
           const listStack = stack.addStack();
           listStack.layoutVertically();
-          items.forEach((item, index) => {
+          visible.forEach((item, index) => {
             this.renderItem(listStack, item, sizes, widgetSize);
-            if (index < items.length - 1) listStack.addSpacer(sizes.spacing);
+            if (index < visible.length - 1) listStack.addSpacer(gap);
           });
           return;
         }
-        const columns = 2;
         const gridStack = stack.addStack();
         gridStack.layoutHorizontally();
         for (let col = 0; col < columns; col++) {
           if (col > 0) gridStack.addSpacer(sizes.spacing * 2);
           const columnStack = gridStack.addStack();
           columnStack.layoutVertically();
-          const colItems = items.filter((_, i) => i % columns === col);
+          const colItems = visible.filter((_, i) => i % columns === col);
           colItems.forEach((item, i) => {
             this.renderItem(columnStack, item, sizes, widgetSize);
-            if (i < colItems.length - 1) columnStack.addSpacer(sizes.spacing);
+            if (i < colItems.length - 1) columnStack.addSpacer(gap);
           });
         }
       }
@@ -911,16 +1005,36 @@ var require_billboard = __commonJS({
       renderWidget(widget, data, widgetSize) {
         const sizes = CONFIG2.sizing[widgetSize];
         this.addHeader(widget, data.title, sizes);
-        widget.addSpacer(sizes.spacing);
+        widget.addSpacer(this.headerSpacing(sizes));
         const contentStack = widget.addStack();
         this.renderGrid(contentStack, data.items, sizes, widgetSize);
+      }
+      // Album covers are square, so use the square art token (same height, more
+      // width than the default portrait thumbnail).
+      coverImageSize(widgetSize) {
+        return CONFIG2.images.gridSquare[widgetSize];
+      }
+      // Grid sources pack rows with the tighter spacing token.
+      headerSpacing() {
+        return CONFIG2.designTokens.compactSpacing;
+      }
+      rowSpacing() {
+        return CONFIG2.designTokens.compactSpacing;
+      }
+      // Square cover vs title (primary) + artist (secondary).
+      rowHeight(sizes, widgetSize) {
+        const cover = this.coverImageSize(widgetSize).height;
+        return Math.max(
+          cover,
+          (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2
+        );
       }
       renderItem(stack, item, sizes, widgetSize = "medium") {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
         itemStack.centerAlignContent();
         if (item.cover) {
-          const imgSize = CONFIG2.images.gridTall[widgetSize];
+          const imgSize = this.coverImageSize(widgetSize);
           const coverImg = itemStack.addImage(item.cover);
           coverImg.imageSize = new Size(imgSize.width, imgSize.height);
           coverImg.cornerRadius = imgSize.cornerRadius;
@@ -1012,10 +1126,9 @@ var require_imdb = __commonJS({
       }
       renderWidget(widget, data, widgetSize) {
         const sizes = CONFIG2.sizing[widgetSize];
-        this.addHeader(widget, "Popular on IMDb", sizes, {
-          subtitle: "Movies \xB7 TV"
-        });
-        widget.addSpacer(sizes.spacing);
+        const headerOptions = widgetSize === "small" ? {} : { subtitle: "Movies \xB7 TV" };
+        this.addHeader(widget, "Popular on IMDb", sizes, headerOptions);
+        widget.addSpacer(this.headerSpacing(sizes));
         const allItems = [
           ...data.movies.map((m) => ({ ...m, type: "movie" })),
           ...data.tvShows.map((t) => ({ ...t, type: "tv" }))
@@ -1023,13 +1136,25 @@ var require_imdb = __commonJS({
         const contentStack = widget.addStack();
         this.renderGrid(contentStack, allItems, sizes, widgetSize);
       }
+      // Poster thumbnail vs title (primary) + meta row (secondary).
+      rowHeight(sizes, widgetSize) {
+        const poster = this.coverImageSize(widgetSize).height;
+        return Math.max(poster, (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2);
+      }
+      // Grid sources pack rows with the tighter spacing token.
+      headerSpacing() {
+        return CONFIG2.designTokens.compactSpacing;
+      }
+      rowSpacing() {
+        return CONFIG2.designTokens.compactSpacing;
+      }
       renderItem(stack, item, sizes, widgetSize = "medium") {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
         itemStack.centerAlignContent();
         if (item.url) itemStack.url = item.url;
         if (item.poster) {
-          const imgSize = CONFIG2.images.gridTall[widgetSize];
+          const imgSize = this.coverImageSize(widgetSize);
           const coverImg = itemStack.addImage(item.poster);
           coverImg.imageSize = new Size(imgSize.width, imgSize.height);
           coverImg.cornerRadius = imgSize.cornerRadius;
@@ -1119,6 +1244,11 @@ var require_steam = __commonJS({
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.games, sizes, widgetSize);
       }
+      // Square game icon vs name (primary) + playtime line (secondary).
+      rowHeight(sizes, widgetSize) {
+        const icon = CONFIG2.images.grid[widgetSize].height;
+        return Math.max(icon, (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2);
+      }
       renderItem(stack, game, sizes, widgetSize = "medium") {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
@@ -1192,6 +1322,10 @@ var require_hacker_news = __commonJS({
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.stories, sizes, widgetSize);
       }
+      // Title (primary) + points/comments line (tertiary).
+      rowHeight(sizes) {
+        return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
+      }
       renderItem(stack, story, sizes, widgetSize) {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
@@ -1264,6 +1398,10 @@ var require_github = __commonJS({
         const contentStack = widget.addStack();
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.releases, sizes, widgetSize);
+      }
+      // Tag (primary) + repo (secondary) + author · time (tertiary).
+      rowHeight(sizes) {
+        return (sizes.fontSize.primary + sizes.fontSize.secondary + sizes.fontSize.tertiary) * 1.2;
       }
       renderItem(stack, item, sizes, widgetSize) {
         const itemStack = stack.addStack();
@@ -1369,6 +1507,12 @@ var require_wikipedia = __commonJS({
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.edits, sizes, widgetSize);
       }
+      // Language badge vs title, then comment (secondary), user (secondary), time.
+      rowHeight(sizes) {
+        const badge = sizes.fontSize.caption * 1.2 + 6;
+        const titleFirstLine = Math.max(sizes.fontSize.primary * 1.2, badge);
+        return titleFirstLine + (2 * sizes.fontSize.secondary + sizes.fontSize.tertiary) * 1.2;
+      }
       renderItem(stack, edit, sizes, widgetSize) {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
@@ -1431,12 +1575,16 @@ var require_timeline = __commonJS({
       }
       renderWidget(widget, data, widgetSize) {
         const sizes = CONFIG2.sizing[widgetSize];
-        const headerOptions = this.category ? { subtitle: this.category } : {};
+        const headerOptions = this.category && widgetSize !== "small" ? { subtitle: this.category } : {};
         this.addHeader(widget, "Timeline", sizes, headerOptions);
         widget.addSpacer(sizes.spacing);
         const contentStack = widget.addStack();
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.events, sizes, widgetSize);
+      }
+      // Up to two lines of title (lineLimit 2) + the time-ago line.
+      rowHeight(sizes) {
+        return (2 * sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
       }
       renderItem(stack, event, sizes, widgetSize) {
         const itemStack = stack.addStack();
@@ -1513,12 +1661,16 @@ var require_bookmarks = __commonJS({
       }
       renderWidget(widget, data, widgetSize) {
         const sizes = CONFIG2.sizing[widgetSize];
-        const headerOptions = this.category ? { subtitle: this.category } : {};
+        const headerOptions = this.category && widgetSize !== "small" ? { subtitle: this.category } : {};
         this.addHeader(widget, "Bookmarks", sizes, headerOptions);
         widget.addSpacer(sizes.spacing);
         const contentStack = widget.addStack();
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.bookmarks, sizes, widgetSize);
+      }
+      // Title (primary) + domain (tertiary).
+      rowHeight(sizes) {
+        return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
       }
       renderItem(stack, item, sizes, widgetSize) {
         const itemStack = stack.addStack();
@@ -1597,7 +1749,7 @@ var require_books = __commonJS({
         widget.addSpacer(sizes.spacing);
         const bodyStack = widget.addStack();
         bodyStack.layoutHorizontally();
-        if (widgetSize !== "small" && data.coverImage) {
+        if (data.coverImage) {
           const coverStack = bodyStack.addStack();
           coverStack.layoutVertically();
           coverStack.centerAlignContent();
@@ -1610,10 +1762,11 @@ var require_books = __commonJS({
         }
         const infoStack = bodyStack.addStack();
         infoStack.layoutVertically();
+        infoStack.addSpacer();
         const titleText = infoStack.addText(FormatUtils2.truncate(data.title, 40));
         titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
         titleText.textColor = CONFIG2.colors.label;
-        titleText.lineLimit = 2;
+        titleText.lineLimit = widgetSize === "large" || widgetSize === "extraLarge" ? 2 : 1;
         const authorsText = infoStack.addText(data.authors);
         authorsText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
         authorsText.textColor = CONFIG2.colors.secondaryLabel;
@@ -1631,17 +1784,9 @@ var require_books = __commonJS({
           );
           metaText.font = Font.systemFont(sizes.fontSize.tertiary);
           metaText.textColor = CONFIG2.colors.tertiaryLabel;
+          metaText.lineLimit = 1;
         }
-        if (widgetSize === "small" && data.coverImage) {
-          infoStack.addSpacer(sizes.spacing);
-          const coverStack = infoStack.addStack();
-          coverStack.centerAlignContent();
-          const cover = coverStack.addImage(data.coverImage);
-          cover.cornerRadius = CONFIG2.designTokens.cornerRadius.cover;
-          cover.centerAlignImage();
-          const smallImgSize = CONFIG2.images.card.small;
-          cover.imageSize = new Size(smallImgSize.width, smallImgSize.height);
-        }
+        infoStack.addSpacer();
         bodyStack.addSpacer();
         if (widgetSize !== "small" && data.goodreadsIcon) {
           const iconStack = bodyStack.addStack();
@@ -1746,10 +1891,12 @@ var require_astronomy = __commonJS({
         if (widgetSize !== "small") {
           contentStack.addSpacer(sizes.spacing);
           this.renderUvRow(contentStack, data, sizes);
+        }
+        if (widgetSize === "large" || widgetSize === "extraLarge") {
           contentStack.addSpacer(sizes.spacing);
           this.renderGoldenHourRow(contentStack, data, sizes);
         }
-        if (widgetSize === "large") {
+        if (widgetSize === "extraLarge") {
           contentStack.addSpacer(sizes.spacing);
           this.renderTemperatureRow(contentStack, data, sizes);
         }
@@ -1904,6 +2051,10 @@ var require_bluesky = __commonJS({
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.posts, sizes, widgetSize);
       }
+      // Up to two lines of post text (lineLimit 2) + author + meta lines.
+      rowHeight(sizes) {
+        return (2 * sizes.fontSize.primary + sizes.fontSize.secondary + sizes.fontSize.tertiary) * 1.2;
+      }
       renderItem(stack, item, sizes, widgetSize) {
         const itemStack = stack.addStack();
         itemStack.layoutHorizontally();
@@ -1990,6 +2141,10 @@ var require_activity = __commonJS({
         const contentStack = widget.addStack();
         contentStack.layoutVertically();
         this.renderItemList(contentStack, data.items, sizes, widgetSize);
+      }
+      // Title (primary) + detail line (tertiary).
+      rowHeight(sizes) {
+        return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
       }
       renderItem(stack, item, sizes, widgetSize) {
         const itemStack = stack.addStack();
@@ -2095,12 +2250,20 @@ var require_status_board = __commonJS({
         widget.addSpacer(sizes.spacing);
         const contentStack = widget.addStack();
         contentStack.layoutVertically();
-        data.sources.forEach((source, index) => {
+        const visible = data.sources.slice(
+          0,
+          this.maxItemsThatFit(sizes, widgetSize)
+        );
+        visible.forEach((source, index) => {
           this.renderSourceRow(contentStack, source, sizes, widgetSize);
-          if (index < data.sources.length - 1) {
+          if (index < visible.length - 1) {
             contentStack.addSpacer(sizes.spacing);
           }
         });
+      }
+      // One semibold line vs the leading source icon.
+      rowHeight(sizes) {
+        return Math.max(sizes.iconSize, sizes.fontSize.primary * 1.2);
       }
       renderSourceRow(stack, source, sizes, widgetSize) {
         const row = stack.addStack();
@@ -2218,8 +2381,9 @@ var require_dhbw_timetable = __commonJS({
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
+        const events = data.events.slice(0, this.maxItemsThatFit(sizes, widgetSize));
         let lastDate = null;
-        data.events.forEach((event, index) => {
+        events.forEach((event, index) => {
           if (event.date !== lastDate) {
             if (lastDate !== null) {
               contentStack.addSpacer(sizes.spacing);
@@ -2233,13 +2397,20 @@ var require_dhbw_timetable = __commonJS({
             lastDate = event.date;
           }
           this.renderItem(contentStack, event, sizes, widgetSize);
-          if (index < data.events.length - 1) {
-            const nextEvent = data.events[index + 1];
+          if (index < events.length - 1) {
+            const nextEvent = events[index + 1];
             if (nextEvent.date === event.date) {
               contentStack.addSpacer(CONFIG2.designTokens.compactSpacing);
             }
           }
         });
+      }
+      // Time column (secondary + tertiary) vs title (primary) + detail (tertiary).
+      rowHeight(sizes) {
+        return Math.max(
+          sizes.fontSize.secondary + sizes.fontSize.tertiary,
+          sizes.fontSize.primary + sizes.fontSize.tertiary
+        ) * 1.2;
       }
       renderItem(stack, event, sizes, widgetSize) {
         const itemStack = stack.addStack();
@@ -2476,8 +2647,8 @@ var require_source_picker = __commonJS({
 var require_widget_chrome = __commonJS({
   "src/ui/widget-chrome.js"(exports2, module2) {
     var { CONFIG: CONFIG2 } = require_config();
-    var { addSeparator, typography } = require_design_system();
-    var ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40 };
+    var { typography } = require_design_system();
+    var ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40, extraLarge: 48 };
     function classifyError(message) {
       const msg = (message || "").toLowerCase();
       if (msg.includes("timeout") || msg.includes("timed out")) return "Timeout";
@@ -2526,49 +2697,19 @@ var require_widget_chrome = __commonJS({
       hintText.centerAlignText();
       return widget;
     }
-    function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
-      widget.addSpacer();
-      addSeparator(widget);
-      widget.addSpacer(CONFIG2.designTokens.compactSpacing);
-      const footer = widget.addStack();
-      footer.layoutHorizontally();
-      footer.centerAlignContent();
-      const updateTime = /* @__PURE__ */ new Date();
-      const hours = updateTime.getHours().toString().padStart(2, "0");
-      const minutes = updateTime.getMinutes().toString().padStart(2, "0");
-      const prefix = widgetSize === "large" ? "Updated " : "";
-      const timeString = `${prefix}${hours}:${minutes}`;
-      const timeText = footer.addText(timeString);
-      timeText.font = typography.caption(sizes);
-      timeText.textColor = CONFIG2.colors.tertiaryLabel;
-      if (usingCache && widgetSize !== "small") {
-        footer.addSpacer();
-        const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
-        offlineIcon.imageSize = new Size(
-          sizes.fontSize.caption,
-          sizes.fontSize.caption
-        );
-        offlineIcon.tintColor = CONFIG2.colors.warning;
-        if (widgetSize === "large") {
-          footer.addSpacer(CONFIG2.designTokens.compactSpacing);
-          const offlineText = footer.addText(CONFIG2.messages.offline);
-          offlineText.font = typography.caption(sizes);
-          offlineText.textColor = CONFIG2.colors.warning;
-        }
-      }
-    }
     async function presentWidget(widget, widgetSize) {
       const presentMap = {
         small: () => widget.presentSmall(),
         medium: () => widget.presentMedium(),
-        large: () => widget.presentLarge()
+        large: () => widget.presentLarge(),
+        extraLarge: () => widget.presentExtraLarge()
       };
       const presentFunc = presentMap[widgetSize];
       if (presentFunc) {
         await presentFunc();
       }
     }
-    module2.exports = { classifyError, createErrorWidget, addFooter, presentWidget };
+    module2.exports = { classifyError, createErrorWidget, presentWidget };
   }
 });
 
@@ -2583,7 +2724,6 @@ var require_app = __commonJS({
     var { DataSourceFactory: DataSourceFactory2 } = require_data_source_factory();
     var { pickSource } = require_source_picker();
     var {
-      addFooter,
       createErrorWidget,
       presentWidget
     } = require_widget_chrome();
@@ -2661,8 +2801,8 @@ var require_app = __commonJS({
         if (!data || this.dataSource.isEmpty(data)) {
           return createErrorWidget("No data available", widgetSize, this.sourceName);
         }
+        this.dataSource.usingCache = usingCache;
         this.dataSource.renderWidget(widget, data, widgetSize);
-        addFooter(widget, sizes, usingCache, widgetSize);
         return widget;
       }
     };

@@ -1,7 +1,7 @@
 const { CONFIG } = require("../config.js");
-const { addSeparator, typography } = require("../design-system.js");
+const { typography } = require("../design-system.js");
 
-const ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40 };
+const ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40, extraLarge: 48 };
 
 function classifyError(message) {
   const msg = (message || "").toLowerCase();
@@ -66,50 +66,12 @@ function createErrorWidget(message, widgetSize = "medium", sourceName = "Widget"
   return widget;
 }
 
-function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
-  widget.addSpacer();
-
-  addSeparator(widget);
-  widget.addSpacer(CONFIG.designTokens.compactSpacing);
-
-  const footer = widget.addStack();
-  footer.layoutHorizontally();
-  footer.centerAlignContent();
-
-  const updateTime = new Date();
-  const hours = updateTime.getHours().toString().padStart(2, "0");
-  const minutes = updateTime.getMinutes().toString().padStart(2, "0");
-  const prefix = widgetSize === "large" ? "Updated " : "";
-  const timeString = `${prefix}${hours}:${minutes}`;
-
-  const timeText = footer.addText(timeString);
-  timeText.font = typography.caption(sizes);
-  timeText.textColor = CONFIG.colors.tertiaryLabel;
-
-  if (usingCache && widgetSize !== "small") {
-    footer.addSpacer();
-
-    const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
-    offlineIcon.imageSize = new Size(
-      sizes.fontSize.caption,
-      sizes.fontSize.caption,
-    );
-    offlineIcon.tintColor = CONFIG.colors.warning;
-
-    if (widgetSize === "large") {
-      footer.addSpacer(CONFIG.designTokens.compactSpacing);
-      const offlineText = footer.addText(CONFIG.messages.offline);
-      offlineText.font = typography.caption(sizes);
-      offlineText.textColor = CONFIG.colors.warning;
-    }
-  }
-}
-
 async function presentWidget(widget, widgetSize) {
   const presentMap = {
     small: () => widget.presentSmall(),
     medium: () => widget.presentMedium(),
     large: () => widget.presentLarge(),
+    extraLarge: () => widget.presentExtraLarge(),
   };
 
   const presentFunc = presentMap[widgetSize];
@@ -118,4 +80,4 @@ async function presentWidget(widget, widgetSize) {
   }
 }
 
-module.exports = { classifyError, createErrorWidget, addFooter, presentWidget };
+module.exports = { classifyError, createErrorWidget, presentWidget };

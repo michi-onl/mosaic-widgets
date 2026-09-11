@@ -54,6 +54,16 @@ class GitHubDataSource extends DataSource {
     this.renderItemList(contentStack, data.releases, sizes, widgetSize);
   }
 
+  // Tag (primary) + repo (secondary) + author · time (tertiary).
+  rowHeight(sizes) {
+    return (
+      (sizes.fontSize.primary +
+        sizes.fontSize.secondary +
+        sizes.fontSize.tertiary) *
+      1.2
+    );
+  }
+
   renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();

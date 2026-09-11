@@ -121,12 +121,14 @@ class AstronomyDataSource extends DataSource {
       contentStack.addSpacer(sizes.spacing);
       // UV index row
       this.renderUvRow(contentStack, data, sizes);
+    }
+
+    if (widgetSize === "large" || widgetSize === "extraLarge") {
       contentStack.addSpacer(sizes.spacing);
-      // Golden hour row
       this.renderGoldenHourRow(contentStack, data, sizes);
     }
 
-    if (widgetSize === "large") {
+    if (widgetSize === "extraLarge") {
       contentStack.addSpacer(sizes.spacing);
       this.renderTemperatureRow(contentStack, data, sizes);
     }

@@ -81,6 +81,11 @@ class ActivityDataSource extends DataSource {
     this.renderItemList(contentStack, data.items, sizes, widgetSize);
   }
 
+  // Title (primary) + detail line (tertiary).
+  rowHeight(sizes) {
+    return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
+  }
+
   renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();

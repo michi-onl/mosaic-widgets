@@ -60,6 +60,16 @@ class BlueskyDataSource extends DataSource {
     this.renderItemList(contentStack, data.posts, sizes, widgetSize);
   }
 
+  // Up to two lines of post text (lineLimit 2) + author + meta lines.
+  rowHeight(sizes) {
+    return (
+      (2 * sizes.fontSize.primary +
+        sizes.fontSize.secondary +
+        sizes.fontSize.tertiary) *
+      1.2
+    );
+  }
+
   renderItem(stack, item, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();

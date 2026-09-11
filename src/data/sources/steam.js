@@ -52,6 +52,12 @@ class SteamDataSource extends DataSource {
     this.renderItemList(contentStack, data.games, sizes, widgetSize);
   }
 
+  // Square game icon vs name (primary) + playtime line (secondary).
+  rowHeight(sizes, widgetSize) {
+    const icon = CONFIG.images.grid[widgetSize].height;
+    return Math.max(icon, (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2);
+  }
+
   renderItem(stack, game, sizes, widgetSize = "medium") {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();

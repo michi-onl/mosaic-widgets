@@ -6,7 +6,6 @@ const { ConfigManager } = require("./core/config-manager.js");
 const { DataSourceFactory } = require("./data/data-source-factory.js");
 const { pickSource } = require("./ui/source-picker.js");
 const {
-  addFooter,
   createErrorWidget,
   presentWidget,
 } = require("./ui/widget-chrome.js");
@@ -108,9 +107,8 @@ class Mosaic {
       return createErrorWidget("No data available", widgetSize, this.sourceName);
     }
 
+    this.dataSource.usingCache = usingCache;
     this.dataSource.renderWidget(widget, data, widgetSize);
-
-    addFooter(widget, sizes, usingCache, widgetSize);
 
     return widget;
   }

@@ -22,9 +22,9 @@
 3. **Color is identity and status, never decoration.** One accent (systemBlue) plus
    semantic red/green/orange. Per-source brand color tints the leading SF Symbol only.
 4. **Concentric radii.** `outer 12 → control 10 → tag 6 → icon 4`.
-5. **Spacing over rules.** List rows are separated by whitespace, not dividers. The
-   single hairline is the footer rule. `addSeparator()` remains available for future
-   grouped surfaces but is not used between rows.
+5. **Spacing over rules.** List rows are separated by whitespace, not dividers.
+   `addSeparator()` remains available for grouped surfaces but is not used between
+   rows, and there is no footer rule.
 6. **4/8pt rhythm.** Spacing comes from the family's `spacing` token, never ad hoc.
 
 ## 3. Color tokens (`CONFIG.colors`)
@@ -51,35 +51,43 @@ Status palettes (`steamStatus`, `dhbwTypes`) map onto the same system colors.
 Compacted from SF text styles. `title` is the semibold emphasis role; `primary`
 remains as an alias for call sites that predate the rename.
 
-| Role | small | medium | large | Weight | Use |
-|---|---|---|---|---|---|
-| title/primary | 13 | 15 | 17 | Semibold | Item names |
-| secondary | 11 | 13 | 15 | Regular | Authors, context |
-| tertiary | 10 | 11 | 13 | Regular | Metadata |
-| caption | 9 | 10 | 11 | Regular | Footer, tags |
+| Role | small | medium | large | extraLarge | Weight | Use |
+|---|---|---|---|---|---|---|
+| title/primary | 13 | 15 | 17 | 18 | Semibold | Item names |
+| secondary | 11 | 13 | 15 | 16 | Regular | Authors, context |
+| tertiary | 10 | 11 | 13 | 14 | Regular | Metadata |
+| caption | 9 | 10 | 11 | 12 | Regular | Header timestamp, tags |
 
 `src/design-system.js` exposes `typography.title/body/footnote/caption(sizes)` so
 render code never hardcodes a weight.
 
 ## 5. Spacing, radii, images
 
-- Spacing: small 6, medium 8, large 10 (`sizes.spacing`, on the 4pt grid family).
+- Spacing: small 6, medium 8, large 10, extraLarge 10 (`sizes.spacing`, on the 4pt grid family).
 - Radii: `designTokens.cornerRadius = { badge: 6, control: 10, card: 12, icon: 4, cover: 8 }`.
 - Tags: `badge.paddingV/H = 3/8`.
-- Image sizes live in `CONFIG.images` (`grid`, `gridTall`, `card` per family).
+- Image sizes live in `CONFIG.images` (`grid` square icons, `gridTall` portrait
+  posters, `gridSquare` square album covers, `card` book covers — per family).
+- Space budgeting: `CONFIG.widgetCanvas` holds the per-family drawable canvas;
+  `DataSource.maxItemsThatFit(sizes, widgetSize)` divides it by each source's
+  `rowHeight()` (overridden by tall-row sources) and `renderItemList`/`renderGrid`
+  render only that many rows. `test/overflow.test.js` guards this across families.
 
 ## 6. Components
 
 - **Header** — leading SF Symbol tinted with the source color (identity), semibold
-  `label` title, optional `secondaryLabel` subtitle. No counts.
+  `label` title, optional `secondaryLabel` subtitle, and the `tertiaryLabel` refresh
+  timestamp right-aligned on the same line (offline = `warning` `icloud.slash` glyph).
+  No counts.
 - **Tag / badge** — neutral translucent `fill` capsule with a colored label or glyph
   (Apple "tinted" style). Replaces the old solid color pills.
 - **List row** — no separators; rows are spaced with `sizes.spacing`. Leading
   accessory optional.
 - **Separator** — `design-system.addSeparator(stack, { inset })`, `separator` color.
-  Reserved for grouped surfaces and the footer rule.
-- **Footer** — hairline + `tertiaryLabel` caption timestamp; offline shown as a
-  `warning` glyph, label only on large.
+  Reserved for grouped surfaces; no longer used for a footer rule.
+- **Refresh time** — `tertiaryLabel` caption at the header's trailing edge
+  (`DataSource.addRefreshTime`); offline adds a `warning` `icloud.slash` glyph.
+  Costs no extra vertical space.
 - **Error** — warning triangle, semibold title, `secondaryLabel` message, tap hint.
 - **Glass surface** — `design-system.addGlassSurface(stack)` = `fill` + `card` radius.
   Use sparingly for grouping; never for arbitrary cells.
@@ -94,6 +102,9 @@ legibility, and no heavy brand color on surfaces.
 ## 8. Migration status
 
 - **Done (v2 token pass):** semantic palette + alpha labels; SF type scale; concentric
-  radii; semibold emphasis; tinted tags; semantic separators; slimmed error/footer.
+  radii; semibold emphasis; tinted tags; semantic separators; slimmed error widget;
+  refresh timestamp moved into the header.
+- **Done (sizing pass):** extraLarge family; per-source row budgeting so content fits
+  every family (`test/overflow.test.js`).
 - **Next:** per-source layout polish against these tokens (list/grid/card), then
-  on-device verification across small/medium/large in light and dark.
+  on-device verification across small/medium/large/extraLarge in light and dark.

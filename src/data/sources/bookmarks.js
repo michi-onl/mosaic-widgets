@@ -45,7 +45,8 @@ class BookmarksDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    const headerOptions = this.category ? { subtitle: this.category } : {};
+    const headerOptions =
+      this.category && widgetSize !== "small" ? { subtitle: this.category } : {};
     this.addHeader(widget, "Bookmarks", sizes, headerOptions);
     widget.addSpacer(sizes.spacing);
 
@@ -53,6 +54,11 @@ class BookmarksDataSource extends DataSource {
     contentStack.layoutVertically();
 
     this.renderItemList(contentStack, data.bookmarks, sizes, widgetSize);
+  }
+
+  // Title (primary) + domain (tertiary).
+  rowHeight(sizes) {
+    return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
   }
 
   renderItem(stack, item, sizes, widgetSize) {

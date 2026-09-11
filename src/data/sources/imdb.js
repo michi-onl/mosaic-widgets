@@ -71,10 +71,10 @@ class IMDbDataSource extends DataSource {
   renderWidget(widget, data, widgetSize) {
     const sizes = CONFIG.sizing[widgetSize];
 
-    this.addHeader(widget, "Popular on IMDb", sizes, {
-      subtitle: "Movies · TV",
-    });
-    widget.addSpacer(sizes.spacing);
+    const headerOptions =
+      widgetSize === "small" ? {} : { subtitle: "Movies · TV" };
+    this.addHeader(widget, "Popular on IMDb", sizes, headerOptions);
+    widget.addSpacer(this.headerSpacing(sizes));
 
     const allItems = [
       ...data.movies.map((m) => ({ ...m, type: "movie" })),
@@ -85,6 +85,21 @@ class IMDbDataSource extends DataSource {
     this.renderGrid(contentStack, allItems, sizes, widgetSize);
   }
 
+  // Poster thumbnail vs title (primary) + meta row (secondary).
+  rowHeight(sizes, widgetSize) {
+    const poster = this.coverImageSize(widgetSize).height;
+    return Math.max(poster, (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2);
+  }
+
+  // Grid sources pack rows with the tighter spacing token.
+  headerSpacing() {
+    return CONFIG.designTokens.compactSpacing;
+  }
+
+  rowSpacing() {
+    return CONFIG.designTokens.compactSpacing;
+  }
+
   renderItem(stack, item, sizes, widgetSize = "medium") {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
@@ -93,7 +108,7 @@ class IMDbDataSource extends DataSource {
     if (item.url) itemStack.url = item.url;
 
     if (item.poster) {
-      const imgSize = CONFIG.images.gridTall[widgetSize];
+      const imgSize = this.coverImageSize(widgetSize);
       const coverImg = itemStack.addImage(item.poster);
       coverImg.imageSize = new Size(imgSize.width, imgSize.height);
       coverImg.cornerRadius = imgSize.cornerRadius;

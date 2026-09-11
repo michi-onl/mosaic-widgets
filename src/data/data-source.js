@@ -34,13 +34,41 @@ class DataSource {
     const titleText = headerStack.addText(title);
     titleText.font = typography.title(sizes);
     titleText.textColor = CONFIG.colors.label;
+    titleText.lineLimit = 1;
 
     if (options.subtitle) {
       headerStack.addSpacer(sizes.spacing);
       const sub = headerStack.addText(options.subtitle);
       sub.font = Font.systemFont(sizes.fontSize.tertiary);
       sub.textColor = CONFIG.colors.secondaryLabel;
+      sub.lineLimit = 1;
     }
+
+    // Push the refresh time to the trailing edge of the header line.
+    headerStack.addSpacer();
+    this.addRefreshTime(headerStack, sizes);
+  }
+
+  // Last-refresh timestamp (and an offline glyph when serving from cache),
+  // right-aligned in the header so it costs no extra vertical space.
+  addRefreshTime(stack, sizes) {
+    if (this.usingCache) {
+      const offlineIcon = stack.addImage(SFSymbol.named("icloud.slash").image);
+      offlineIcon.imageSize = new Size(
+        sizes.fontSize.caption,
+        sizes.fontSize.caption,
+      );
+      offlineIcon.tintColor = CONFIG.colors.warning;
+      stack.addSpacer(CONFIG.designTokens.compactSpacing);
+    }
+
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+
+    const timeText = stack.addText(`${hours}:${minutes}`);
+    timeText.font = typography.caption(sizes);
+    timeText.textColor = CONFIG.colors.tertiaryLabel;
   }
 
   addBadge(parentStack, { text, icon, color, sizes }) {
@@ -73,27 +101,80 @@ class DataSource {
     img.cornerRadius = size / 2;
   }
 
+  // --- Space budgeting ----------------------------------------------------
+  // A ListWidget clips/ellipsizes once its intrinsic height exceeds the
+  // family's drawable canvas, so each source only renders as many rows as fit.
+  // Sources with taller rows (multi-line titles, avatar/poster rows) override
+  // `rowHeight` to declare that.
+
+  headerHeight(sizes) {
+    const titleLine = sizes.fontSize.title * 1.2;
+    return Math.max(sizes.iconSize, titleLine) + this.headerSpacing(sizes);
+  }
+
+  // Gap between the header and the item area (grid sources tighten it).
+  headerSpacing(sizes) {
+    return sizes.spacing;
+  }
+
+  // Gap between item rows (grid sources tighten it).
+  rowSpacing(sizes) {
+    return sizes.spacing;
+  }
+
+  // Leading thumbnail for a row. Portrait by default; sources whose art is a
+  // different aspect (e.g. square album covers) return their own size.
+  coverImageSize(widgetSize) {
+    return CONFIG.images.gridTall[widgetSize];
+  }
+
+  // Vertical room left for the item area after widget padding and header.
+  bodyHeight(sizes, widgetSize) {
+    const canvas = CONFIG.widgetCanvas[widgetSize] || CONFIG.widgetCanvas.medium;
+    return canvas.height - 2 * sizes.padding - this.headerHeight(sizes);
+  }
+
+  // Intrinsic minimum height of one row, in points.
+  rowHeight(sizes) {
+    return (sizes.fontSize.primary + sizes.fontSize.secondary) * 1.2;
+  }
+
+  maxItemsThatFit(sizes, widgetSize) {
+    const body = this.bodyHeight(sizes, widgetSize);
+    const row = this.rowHeight(sizes, widgetSize) + this.rowSpacing(sizes);
+    return Math.max(1, Math.floor((body + this.rowSpacing(sizes)) / row));
+  }
+
   renderItemList(stack, items, sizes, widgetSize = "medium") {
-    items.forEach((item, index) => {
+    const visible = items.slice(0, this.maxItemsThatFit(sizes, widgetSize));
+    const gap = this.rowSpacing(sizes);
+
+    visible.forEach((item, index) => {
       this.renderItem(stack, item, sizes, widgetSize);
-      if (index < items.length - 1) {
-        stack.addSpacer(sizes.spacing);
+      if (index < visible.length - 1) {
+        stack.addSpacer(gap);
       }
     });
   }
 
   renderGrid(stack, items, sizes, widgetSize) {
-    if (widgetSize === "small") {
+    const columns =
+      widgetSize === "small" ? 1 : widgetSize === "extraLarge" ? 3 : 2;
+    const gap = this.rowSpacing(sizes);
+    const visible = items.slice(
+      0,
+      this.maxItemsThatFit(sizes, widgetSize) * columns,
+    );
+
+    if (columns === 1) {
       const listStack = stack.addStack();
       listStack.layoutVertically();
-      items.forEach((item, index) => {
+      visible.forEach((item, index) => {
         this.renderItem(listStack, item, sizes, widgetSize);
-        if (index < items.length - 1) listStack.addSpacer(sizes.spacing);
+        if (index < visible.length - 1) listStack.addSpacer(gap);
       });
       return;
     }
-
-    const columns = 2;
 
     const gridStack = stack.addStack();
     gridStack.layoutHorizontally();
@@ -107,10 +188,10 @@ class DataSource {
       const columnStack = gridStack.addStack();
       columnStack.layoutVertically();
 
-      const colItems = items.filter((_, i) => i % columns === col);
+      const colItems = visible.filter((_, i) => i % columns === col);
       colItems.forEach((item, i) => {
         this.renderItem(columnStack, item, sizes, widgetSize);
-        if (i < colItems.length - 1) columnStack.addSpacer(sizes.spacing);
+        if (i < colItems.length - 1) columnStack.addSpacer(gap);
       });
     }
   }

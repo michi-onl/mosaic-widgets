@@ -26,7 +26,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - `src/data/data-source.js` — `DataSource` base class
 - `src/data/sources/` — one file per data source
 - `src/data/data-source-factory.js` — `DataSourceFactory` registry
-- `src/ui/` — `ConfigManager`'s alert flows (`config-ui.js`), the in-app source picker (`source-picker.js`), and widget chrome: footer, error widget + `classifyError`, presentation (`widget-chrome.js`)
+- `src/ui/` — `ConfigManager`'s alert flows (`config-ui.js`), the in-app source picker (`source-picker.js`), and widget chrome: error widget + `classifyError`, presentation (`widget-chrome.js`)
 - `src/app.js` — `Mosaic` entry point (orchestration only)
 - `src/index.js` — composition root, re-exports, execution guard
 
@@ -57,7 +57,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 4. `fetchData(widgetSize)` → `RefreshManager.recordSuccess/Error` → `CacheManager.save`
 5. `renderWidget(widget, data, widgetSize)`
 6. Network failure → `CacheManager.load` fallback
-7. `addFooter` (medium: time only, large: time + offline text, small: none)
+7. `addHeader` right-aligns the refresh time (`usingCache` shows an offline glyph)
 8. In-app run: source picker with config setup UI for sources with editable fields
 
 ### Source-specific behavior
@@ -74,14 +74,15 @@ Design system v2 is Apple-native / SF-clean; the spec is `design-system.md`. Tok
 - **Semantic colors only**: `CONFIG.colors.label` / `secondaryLabel` / `tertiaryLabel` / `quaternaryLabel`, `separator`, `fill`, plus `accent` (systemBlue) and status colors. Color is identity/status, never decoration.
 - **Typography via helpers**: use `typography.title/body/footnote/caption(sizes)` from `src/design-system.js` rather than calling `Font.*` with a hardcoded weight. Titles are semibold, not bold.
 - **Tags/badges** use `DataSource.addBadge()` (delegates to `addTag`): neutral translucent `fill` capsule with a colored label or glyph. Plain styled text labels (like GitHub pre-release) stay inline.
-- **Separators**: list rows are separated by spacing only — `renderItemList` draws no rules. The only hairline is the footer rule, via `addSeparator()`/the `separator` token (0.5pt).
+- **Separators**: list rows are separated by spacing only — `renderItemList` draws no rules. `addSeparator()`/the `separator` token (0.5pt) remain available for grouped surfaces.
 - **Radii** are concentric: `designTokens.cornerRadius` = `{ badge: 6, control: 10, card: 12, icon: 4, cover: 8 }`.
-- **`addHeader()`** accepts optional `options` object with `subtitle` for filtered views. Do not add item counts to headers.
-- **Footers**: medium (compact, time only) and large (time + offline text). Small widgets have no footer.
+- **`addHeader()`** accepts optional `options` object with `subtitle` for filtered views, and right-aligns the refresh timestamp at the trailing edge via `addRefreshTime()` (offline = `icloud.slash` glyph + `warning`). Do not add item counts to headers.
+- **Refresh time** lives in the header, so it costs no extra vertical space; there is no footer.
 - **Error widget** is size-aware — always pass `widgetSize` to `createErrorWidget()`.
 - **Liquid Glass**: a `ListWidget` cannot blur; iOS already renders the widget as a material. Keep content first and use `addGlassSurface()` only for small grouping surfaces.
 - **TimelineDataSource** and **ActivityDataSource** have `static sourceIcons` and `static sourceColors` mapping internal source types — these are class properties, not user config. `DataSource.addSourceBadge()` reads these via `this.constructor.sourceIcons/sourceColors`.
 - **Per-source header tint**: `CONFIG.sources.<name>.color` (a `Color`, usually the service's own brand color) tints that source's header icon via `addHeader()` and its Status Board row icon. Omit it for aggregator sources (Timeline, Activity, StatusBoard) and ones already color-coded per-row (DHBW Timetable) — falls back to `CONFIG.colors.accent`.
+- **Space budgeting**: `CONFIG.widgetCanvas` holds the per-family drawable canvas. `DataSource.maxItemsThatFit()` divides the body area by a source's `rowHeight()` (overridden by tall-row sources); `renderItemList`/`renderGrid` render only that many rows. `CONFIG.sizing.<family>.maxItems` is just the fetch ceiling. Covers small/medium/large/extraLarge (extraLarge is iPad-only). `test/overflow.test.js` renders every source at every family and fails on clipping.
 
 ## Constraints
 

@@ -38,6 +38,11 @@ class HackerNewsDataSource extends DataSource {
     this.renderItemList(contentStack, data.stories, sizes, widgetSize);
   }
 
+  // Title (primary) + points/comments line (tertiary).
+  rowHeight(sizes) {
+    return (sizes.fontSize.primary + sizes.fontSize.tertiary) * 1.2;
+  }
+
   renderItem(stack, story, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();

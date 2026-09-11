@@ -79,6 +79,16 @@ class WikipediaDataSource extends DataSource {
     this.renderItemList(contentStack, data.edits, sizes, widgetSize);
   }
 
+  // Language badge vs title, then comment (secondary), user (secondary), time.
+  rowHeight(sizes) {
+    const badge = sizes.fontSize.caption * 1.2 + 6;
+    const titleFirstLine = Math.max(sizes.fontSize.primary * 1.2, badge);
+    return (
+      titleFirstLine +
+      (2 * sizes.fontSize.secondary + sizes.fontSize.tertiary) * 1.2
+    );
+  }
+
   renderItem(stack, edit, sizes, widgetSize) {
     const itemStack = stack.addStack();
     itemStack.layoutHorizontally();
