@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 require("./scriptable-stubs");
-const { FormatUtils } = require("../Mosaic.js");
+const { FormatUtils } = require("../src/index.js");
 
 test("truncate leaves short strings untouched", () => {
   assert.equal(FormatUtils.truncate("hello", 10), "hello");

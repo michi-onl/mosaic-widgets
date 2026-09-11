@@ -2,15 +2,33 @@
 
 ## Project Overview
 
-iOS/macOS widgets for the [Scriptable](https://scriptable.app/) app. Single JavaScript file (`Mosaic.js`, ~2900 lines) that runs inside Scriptable on device. No build system or package manager. Relies on Scriptable globals (`ListWidget`, `Stack`, `SFSymbol`, `Font`, `Color`, `Request`, `FileManager`, `Keychain`, `Script`, `Location`, `config`, `args`). The final "EXECUTION" block at the bottom of the file only runs when `Script` is defined, so the file can also be `require`'d from plain Node.
+iOS/macOS widgets for the [Scriptable](https://scriptable.app/) app. Source is a CommonJS module tree under `src/`, bundled by esbuild into the single committed `Mosaic.js` that runs inside Scriptable on device. Relies on Scriptable globals (`ListWidget`, `Stack`, `SFSymbol`, `Font`, `Color`, `Request`, `FileManager`, `Keychain`, `Script`, `Location`, `config`, `args`).
 
-Widget rendering is interactive only: edit the JS file, copy to the Scriptable iCloud folder, run in the Scriptable app. Pure logic (`FormatUtils`, `StatusBoardDataSource.topItemExtractors` coverage, per-source config validation) has a `node --test` suite under `test/` — run with `node --test`. `test/scriptable-stubs.js` stubs the handful of Scriptable globals touched at module-load time (currently just `Color`); extend it if a future test needs to exercise rendering.
+- `npm run build` — bundle `src/index.js` → `Mosaic.js` (Scriptable metadata banner comes from `build.mjs`)
+- `npm test` / `node --test` — run the suite in `test/` against `src/` directly (no build needed)
+- `npm run check` — build, then test
+
+`src/index.js` is a thin composition root: it wires modules, re-exports the public surface for tests, and runs the app only when `Script` is defined (an IIFE, not top-level await, so Node can `require` it). `test/scriptable-stubs.js` stubs the Scriptable globals touched at module-load time (currently just `Color`); extend it if a future test needs to exercise rendering.
+
+Widget rendering is interactive only: build, copy `Mosaic.js` to the Scriptable iCloud folder, run in the Scriptable app. Pure logic (`FormatUtils`, StatusBoard extractor coverage, per-source config validation) is covered by `node --test`.
 
 ## Architecture
 
-### CONFIG object (top of file)
+### CONFIG object (`src/config.js`)
 
 Structural defaults only: endpoints, icons, refresh intervals, sizing constants, color palette, design tokens. User-specific settings live in `widget-config.json` (synced via iCloud), never in the JS file. `ConfigManager` deep-merges the two at startup (`Object.assign` on `CONFIG.sources` — shallow merge per source, not deep).
+
+### Module layout
+
+- `src/config.js` — `CONFIG`
+- `src/core/` — `APIClient`, `ImageCache`, `CacheManager`, `RefreshManager`, `ConfigManager`, `FormatUtils`
+- `src/data/data-source.js` — `DataSource` base class
+- `src/data/sources/` — one file per data source
+- `src/data/data-source-factory.js` — `DataSourceFactory` registry
+- `src/app.js` — `Mosaic` entry point
+- `src/index.js` — composition root, re-exports, execution guard
+
+`StatusBoardDataSource` requires `DataSourceFactory` lazily inside `fetchData()` — the factory itself imports every source, so a top-level require would be a load-time cycle yielding `undefined`.
 
 ### Class hierarchy
 
@@ -60,7 +78,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 
 ## Constraints
 
-- Line 1–3 of `Mosaic.js` are Scriptable metadata comment (`icon-color`, `icon-glyph`). Must stay at the very top.
+- Line 1–3 of the bundled `Mosaic.js` are the Scriptable metadata comment (`icon-color`, `icon-glyph`), injected by the `banner` option in `build.mjs`. Never hand-edit them in `Mosaic.js` — edit `build.mjs` and rebuild.
 - `widget-config.json` in the repo is a template. Real user config lives in the Scriptable iCloud folder and is never committed. `apiToken` is set via the in-app "API Token" menu (stored in `Keychain`), not this file.
 - `ConfigManager.getEditableFields()` defines which sources have in-app setup UI. Adding a new editable source requires updating this method.
 - `DataSourceFactory.sourceMap` is the registry of all source names to classes. Adding a source requires an entry here.

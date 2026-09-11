@@ -1,0 +1,14 @@
+{
+  "name": "mosaic-widgets",
+  "version": "2.0.0",
+  "private": true,
+  "description": "iOS/macOS Scriptable widgets (Mosaic). Source lives in src/, bundled to a single Scriptable script.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test",
+    "check": "npm run build && node --test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

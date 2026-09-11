@@ -159,3 +159,17 @@ Set the Parameter field in the Scriptable widget settings on your home screen.
 ## In-app setup
 
 You can also configure sources by running the script directly inside Scriptable (tap it instead of adding as a widget). This opens a setup screen where you can edit fields for sources that need configuration, plus an "API Token ⚙️" entry for your api.michi.onl token. Source field changes save to `widget-config.json` and sync across your devices through iCloud; the API token is stored in Keychain and stays device-local.
+
+## Development
+
+Source lives in `src/` as CommonJS modules; `Mosaic.js` is the bundled Scriptable script and is generated, not hand-edited.
+
+```sh
+npm install
+npm run build   # bundle src/index.js -> Mosaic.js
+npm test        # node --test against src/
+npm run check   # build + test
+```
+
+Copy the generated `Mosaic.js` into your Scriptable folder after building.
+

@@ -7,7 +7,7 @@ const {
   SteamDataSource,
   GitHubDataSource,
   BooksDataSource,
-} = require("../Mosaic.js");
+} = require("../src/index.js");
 
 test("every configured source (other than statusboard) has a topItemExtractors entry", () => {
   const sourceNames = Object.keys(CONFIG.sources).filter(
