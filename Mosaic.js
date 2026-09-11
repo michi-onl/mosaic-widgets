@@ -649,53 +649,6 @@ var require_config_manager = __commonJS({
           console.error(`Failed to save API token to Keychain: ${error.message}`);
         }
       }
-      static async showApiTokenSetupUI() {
-        const alert = new Alert();
-        alert.title = "API Token";
-        alert.message = "Used to authenticate with api.michi.onl. Stored in Keychain, not synced via iCloud.";
-        alert.addTextField("API Token", CONFIG2.apiToken || "");
-        alert.addAction("Save");
-        alert.addCancelAction("Cancel");
-        const result = await alert.presentAlert();
-        if (result === -1) return false;
-        this.setApiToken(alert.textFieldValue(0).trim());
-        return true;
-      }
-      static async showSetupUI(sourceName) {
-        const config2 = CONFIG2.sources[sourceName];
-        if (!config2) return false;
-        const alert = new Alert();
-        alert.title = `Configure ${config2.name}`;
-        const editableFields = this.getEditableFields(sourceName);
-        if (editableFields.length === 0) {
-          alert.message = "No configurable settings for this source.";
-          alert.addAction("OK");
-          await alert.presentAlert();
-          return false;
-        }
-        alert.message = "Edit settings below. Changes sync across devices via iCloud.";
-        for (const field of editableFields) {
-          const currentValue = config2[field.key];
-          const displayValue = Array.isArray(currentValue) ? currentValue.join(", ") : currentValue || "";
-          alert.addTextField(field.label, displayValue);
-        }
-        alert.addAction("Save");
-        alert.addCancelAction("Cancel");
-        const result = await alert.presentAlert();
-        if (result === -1) return false;
-        const overrides = {};
-        editableFields.forEach((field, index) => {
-          const value = alert.textFieldValue(index);
-          if (field.isArray) {
-            overrides[field.key] = value.split(",").map((s) => s.trim()).filter(Boolean);
-          } else {
-            overrides[field.key] = value;
-          }
-        });
-        this.save({ [sourceName]: overrides });
-        Object.assign(CONFIG2.sources[sourceName], overrides);
-        return true;
-      }
       static getEditableFields(sourceName) {
         const fieldMap = {
           steam: [
@@ -2361,6 +2314,207 @@ var require_data_source_factory = __commonJS({
   }
 });
 
+// src/ui/config-ui.js
+var require_config_ui = __commonJS({
+  "src/ui/config-ui.js"(exports2, module2) {
+    var { CONFIG: CONFIG2 } = require_config();
+    var { ConfigManager: ConfigManager2 } = require_config_manager();
+    async function showApiTokenSetupUI() {
+      const alert = new Alert();
+      alert.title = "API Token";
+      alert.message = "Used to authenticate with api.michi.onl. Stored in Keychain, not synced via iCloud.";
+      alert.addTextField("API Token", CONFIG2.apiToken || "");
+      alert.addAction("Save");
+      alert.addCancelAction("Cancel");
+      const result = await alert.presentAlert();
+      if (result === -1) return false;
+      ConfigManager2.setApiToken(alert.textFieldValue(0).trim());
+      return true;
+    }
+    async function showSetupUI(sourceName) {
+      const config2 = CONFIG2.sources[sourceName];
+      if (!config2) return false;
+      const alert = new Alert();
+      alert.title = `Configure ${config2.name}`;
+      const editableFields = ConfigManager2.getEditableFields(sourceName);
+      if (editableFields.length === 0) {
+        alert.message = "No configurable settings for this source.";
+        alert.addAction("OK");
+        await alert.presentAlert();
+        return false;
+      }
+      alert.message = "Edit settings below. Changes sync across devices via iCloud.";
+      for (const field of editableFields) {
+        const currentValue = config2[field.key];
+        const displayValue = Array.isArray(currentValue) ? currentValue.join(", ") : currentValue || "";
+        alert.addTextField(field.label, displayValue);
+      }
+      alert.addAction("Save");
+      alert.addCancelAction("Cancel");
+      const result = await alert.presentAlert();
+      if (result === -1) return false;
+      const overrides = {};
+      editableFields.forEach((field, index) => {
+        const value = alert.textFieldValue(index);
+        if (field.isArray) {
+          overrides[field.key] = value.split(",").map((s) => s.trim()).filter(Boolean);
+        } else {
+          overrides[field.key] = value;
+        }
+      });
+      ConfigManager2.save({ [sourceName]: overrides });
+      Object.assign(CONFIG2.sources[sourceName], overrides);
+      return true;
+    }
+    module2.exports = { showApiTokenSetupUI, showSetupUI };
+  }
+});
+
+// src/ui/source-picker.js
+var require_source_picker = __commonJS({
+  "src/ui/source-picker.js"(exports2, module2) {
+    var { CONFIG: CONFIG2 } = require_config();
+    var { ConfigManager: ConfigManager2 } = require_config_manager();
+    var { showApiTokenSetupUI, showSetupUI } = require_config_ui();
+    async function pickSource() {
+      const sourceNames = Object.keys(CONFIG2.sources);
+      const alert = new Alert();
+      alert.title = "Mosaic";
+      alert.message = "Choose a source to preview or configure.";
+      alert.addAction("API Token \u2699\uFE0F");
+      for (const name of sourceNames) {
+        const src = CONFIG2.sources[name];
+        const hasFields = ConfigManager2.getEditableFields(name).length > 0;
+        alert.addAction(`${src.name}${hasFields ? " \u2699\uFE0F" : ""}`);
+      }
+      alert.addCancelAction("Cancel");
+      const choice = await alert.presentAlert();
+      if (choice === -1) return null;
+      if (choice === 0) {
+        await showApiTokenSetupUI();
+        return pickSource();
+      }
+      const chosen = sourceNames[choice - 1];
+      const editableFields = ConfigManager2.getEditableFields(chosen);
+      if (editableFields.length > 0) {
+        const actionAlert = new Alert();
+        actionAlert.title = CONFIG2.sources[chosen].name;
+        actionAlert.addAction("Show Widget");
+        actionAlert.addAction("Configure");
+        actionAlert.addCancelAction("Cancel");
+        const action = await actionAlert.presentAlert();
+        if (action === -1) return null;
+        if (action === 1) {
+          await showSetupUI(chosen);
+        }
+      }
+      return chosen;
+    }
+    module2.exports = { pickSource };
+  }
+});
+
+// src/ui/widget-chrome.js
+var require_widget_chrome = __commonJS({
+  "src/ui/widget-chrome.js"(exports2, module2) {
+    var { CONFIG: CONFIG2 } = require_config();
+    var ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40 };
+    function classifyError(message) {
+      const msg = (message || "").toLowerCase();
+      if (msg.includes("timeout") || msg.includes("timed out")) return "Timeout";
+      if (msg.includes("401") || msg.includes("403")) return "Auth Error";
+      if (msg.includes("429")) return "Rate Limited";
+      if (msg.includes("network") || msg.includes("connect")) return "Network Error";
+      return "Error";
+    }
+    function createErrorWidget(message, widgetSize = "medium", sourceName = "Widget") {
+      const widget = new ListWidget();
+      const sizes = CONFIG2.sizing[widgetSize];
+      const iconSize = ERROR_ICON_SIZES[widgetSize] || 32;
+      widget.setPadding(
+        sizes.padding,
+        sizes.padding,
+        sizes.padding,
+        sizes.padding
+      );
+      widget.url = "scriptable://run?name=" + encodeURIComponent(Script.name());
+      const stack = widget.addStack();
+      stack.layoutVertically();
+      stack.centerAlignContent();
+      const icon = stack.addImage(
+        SFSymbol.named("exclamationmark.triangle").image
+      );
+      icon.imageSize = new Size(iconSize, iconSize);
+      icon.tintColor = CONFIG2.colors.warning;
+      stack.addSpacer(sizes.spacing);
+      const errorText = stack.addText(`${sourceName} ${classifyError(message)}`);
+      errorText.font = Font.boldSystemFont(sizes.fontSize.primary);
+      errorText.textColor = CONFIG2.colors.primary;
+      errorText.centerAlignText();
+      if (widgetSize !== "small") {
+        stack.addSpacer(CONFIG2.designTokens.compactSpacing);
+        const messageText = stack.addText(message);
+        messageText.font = Font.systemFont(sizes.fontSize.tertiary);
+        messageText.textColor = CONFIG2.colors.secondary;
+        messageText.centerAlignText();
+      }
+      stack.addSpacer(
+        widgetSize === "small" ? CONFIG2.designTokens.compactSpacing : sizes.spacing
+      );
+      const hintText = stack.addText(CONFIG2.messages.tapRetry);
+      hintText.font = Font.systemFont(sizes.fontSize.tertiary);
+      hintText.textColor = CONFIG2.colors.tertiary;
+      hintText.centerAlignText();
+      return widget;
+    }
+    function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
+      widget.addSpacer();
+      const sep = widget.addStack();
+      sep.size = new Size(0, 0.5);
+      sep.backgroundColor = CONFIG2.colors.tertiary;
+      widget.addSpacer(CONFIG2.designTokens.compactSpacing);
+      const footer = widget.addStack();
+      footer.layoutHorizontally();
+      footer.centerAlignContent();
+      const updateTime = /* @__PURE__ */ new Date();
+      const hours = updateTime.getHours().toString().padStart(2, "0");
+      const minutes = updateTime.getMinutes().toString().padStart(2, "0");
+      const prefix = widgetSize === "large" ? "Updated " : "";
+      const timeString = `${prefix}${hours}:${minutes}`;
+      const timeText = footer.addText(timeString);
+      timeText.font = Font.systemFont(sizes.fontSize.caption);
+      timeText.textColor = CONFIG2.colors.tertiary;
+      if (usingCache && widgetSize !== "small") {
+        footer.addSpacer();
+        const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
+        offlineIcon.imageSize = new Size(
+          sizes.fontSize.caption,
+          sizes.fontSize.caption
+        );
+        offlineIcon.tintColor = CONFIG2.colors.warning;
+        if (widgetSize === "large") {
+          footer.addSpacer(CONFIG2.designTokens.compactSpacing);
+          const offlineText = footer.addText(CONFIG2.messages.offline);
+          offlineText.font = Font.systemFont(sizes.fontSize.caption);
+          offlineText.textColor = CONFIG2.colors.warning;
+        }
+      }
+    }
+    async function presentWidget(widget, widgetSize) {
+      const presentMap = {
+        small: () => widget.presentSmall(),
+        medium: () => widget.presentMedium(),
+        large: () => widget.presentLarge()
+      };
+      const presentFunc = presentMap[widgetSize];
+      if (presentFunc) {
+        await presentFunc();
+      }
+    }
+    module2.exports = { classifyError, createErrorWidget, addFooter, presentWidget };
+  }
+});
+
 // src/app.js
 var require_app = __commonJS({
   "src/app.js"(exports2, module2) {
@@ -2370,6 +2524,12 @@ var require_app = __commonJS({
     var { RefreshManager: RefreshManager2 } = require_refresh_manager();
     var { ConfigManager: ConfigManager2 } = require_config_manager();
     var { DataSourceFactory: DataSourceFactory2 } = require_data_source_factory();
+    var { pickSource } = require_source_picker();
+    var {
+      addFooter,
+      createErrorWidget,
+      presentWidget
+    } = require_widget_chrome();
     var Mosaic2 = class {
       constructor() {
         this.sourceName = args.widgetParameter || CONFIG2.defaultSource;
@@ -2379,7 +2539,7 @@ var require_app = __commonJS({
         try {
           await ConfigManager2.load();
           if (!config.runsInWidget) {
-            const picked = await this.showSourcePicker();
+            const picked = await pickSource();
             if (picked === null) {
               Script.complete();
               return;
@@ -2395,49 +2555,16 @@ var require_app = __commonJS({
           if (config.runsInWidget) {
             Script.setWidget(widget);
           } else {
-            await this.presentWidget(widget, widgetSize);
+            await presentWidget(widget, widgetSize);
           }
           Script.complete();
         } catch (error) {
           console.error("Widget error:", error);
-          const errorWidget = this.createErrorWidget(error.message, widgetSize);
-          Script.setWidget(errorWidget);
+          Script.setWidget(
+            createErrorWidget(error.message, widgetSize, this.sourceName)
+          );
           Script.complete();
         }
-      }
-      async showSourcePicker() {
-        const sourceNames = Object.keys(CONFIG2.sources);
-        const alert = new Alert();
-        alert.title = "Mosaic";
-        alert.message = "Choose a source to preview or configure.";
-        alert.addAction("API Token \u2699\uFE0F");
-        for (const name of sourceNames) {
-          const src = CONFIG2.sources[name];
-          const hasFields = ConfigManager2.getEditableFields(name).length > 0;
-          alert.addAction(`${src.name}${hasFields ? " \u2699\uFE0F" : ""}`);
-        }
-        alert.addCancelAction("Cancel");
-        const choice = await alert.presentAlert();
-        if (choice === -1) return null;
-        if (choice === 0) {
-          await ConfigManager2.showApiTokenSetupUI();
-          return this.showSourcePicker();
-        }
-        const chosen = sourceNames[choice - 1];
-        const editableFields = ConfigManager2.getEditableFields(chosen);
-        if (editableFields.length > 0) {
-          const actionAlert = new Alert();
-          actionAlert.title = CONFIG2.sources[chosen].name;
-          actionAlert.addAction("Show Widget");
-          actionAlert.addAction("Configure");
-          actionAlert.addCancelAction("Cancel");
-          const action = await actionAlert.presentAlert();
-          if (action === -1) return null;
-          if (action === 1) {
-            await ConfigManager2.showSetupUI(chosen);
-          }
-        }
-        return chosen;
       }
       async createWidget(widgetSize) {
         const widget = new ListWidget();
@@ -2471,110 +2598,15 @@ var require_app = __commonJS({
             usingCache = true;
             console.log(`Using cached data (${cached.ageHours.toFixed(1)}h old)`);
           } else {
-            return this.createErrorWidget(error.message, widgetSize);
+            return createErrorWidget(error.message, widgetSize, this.sourceName);
           }
         }
         if (!data || this.dataSource.isEmpty(data)) {
-          return this.createErrorWidget("No data available", widgetSize);
+          return createErrorWidget("No data available", widgetSize, this.sourceName);
         }
         this.dataSource.renderWidget(widget, data, widgetSize);
-        this.addFooter(widget, sizes, usingCache, widgetSize);
+        addFooter(widget, sizes, usingCache, widgetSize);
         return widget;
-      }
-      createErrorWidget(message, widgetSize = "medium") {
-        const widget = new ListWidget();
-        const sizes = CONFIG2.sizing[widgetSize];
-        const iconSizes = { small: 24, medium: 32, large: 40 };
-        widget.setPadding(
-          sizes.padding,
-          sizes.padding,
-          sizes.padding,
-          sizes.padding
-        );
-        widget.url = "scriptable://run?name=" + encodeURIComponent(Script.name());
-        const stack = widget.addStack();
-        stack.layoutVertically();
-        stack.centerAlignContent();
-        const icon = stack.addImage(
-          SFSymbol.named("exclamationmark.triangle").image
-        );
-        const iconSize = iconSizes[widgetSize] || 32;
-        icon.imageSize = new Size(iconSize, iconSize);
-        icon.tintColor = CONFIG2.colors.warning;
-        stack.addSpacer(sizes.spacing);
-        const sourceName = this.sourceName || "Widget";
-        const msg = message.toLowerCase();
-        let errorType = "Error";
-        if (msg.includes("timeout") || msg.includes("timed out"))
-          errorType = "Timeout";
-        else if (msg.includes("401") || msg.includes("403"))
-          errorType = "Auth Error";
-        else if (msg.includes("429")) errorType = "Rate Limited";
-        else if (msg.includes("network") || msg.includes("connect"))
-          errorType = "Network Error";
-        const errorText = stack.addText(`${sourceName} ${errorType}`);
-        errorText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        errorText.textColor = CONFIG2.colors.primary;
-        errorText.centerAlignText();
-        if (widgetSize !== "small") {
-          stack.addSpacer(CONFIG2.designTokens.compactSpacing);
-          const messageText = stack.addText(message);
-          messageText.font = Font.systemFont(sizes.fontSize.tertiary);
-          messageText.textColor = CONFIG2.colors.secondary;
-          messageText.centerAlignText();
-        }
-        stack.addSpacer(
-          widgetSize === "small" ? CONFIG2.designTokens.compactSpacing : sizes.spacing
-        );
-        const hintText = stack.addText(CONFIG2.messages.tapRetry);
-        hintText.font = Font.systemFont(sizes.fontSize.tertiary);
-        hintText.textColor = CONFIG2.colors.tertiary;
-        hintText.centerAlignText();
-        return widget;
-      }
-      addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
-        widget.addSpacer();
-        const sep = widget.addStack();
-        sep.size = new Size(0, 0.5);
-        sep.backgroundColor = CONFIG2.colors.tertiary;
-        widget.addSpacer(CONFIG2.designTokens.compactSpacing);
-        const footer = widget.addStack();
-        footer.layoutHorizontally();
-        footer.centerAlignContent();
-        const updateTime = /* @__PURE__ */ new Date();
-        const hours = updateTime.getHours().toString().padStart(2, "0");
-        const minutes = updateTime.getMinutes().toString().padStart(2, "0");
-        const prefix = widgetSize === "large" ? "Updated " : "";
-        const timeString = `${prefix}${hours}:${minutes}`;
-        const timeText = footer.addText(timeString);
-        timeText.font = Font.systemFont(sizes.fontSize.caption);
-        timeText.textColor = CONFIG2.colors.tertiary;
-        if (usingCache && widgetSize !== "small") {
-          footer.addSpacer();
-          const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
-          offlineIcon.imageSize = new Size(
-            sizes.fontSize.caption,
-            sizes.fontSize.caption
-          );
-          offlineIcon.tintColor = CONFIG2.colors.warning;
-          if (widgetSize === "large") {
-            footer.addSpacer(CONFIG2.designTokens.compactSpacing);
-            const offlineText = footer.addText(CONFIG2.messages.offline);
-            offlineText.font = Font.systemFont(sizes.fontSize.caption);
-            offlineText.textColor = CONFIG2.colors.warning;
-          }
-        }
-      }
-      async presentWidget(widget, widgetSize) {
-        const presentMap = {
-          small: () => widget.presentSmall(),
-          medium: () => widget.presentMedium(),
-          large: () => widget.presentLarge()
-        };
-        const presentFunc = presentMap[widgetSize];
-        if (presentFunc) {
-          await presentFunc();
-        }
       }
     };
     module2.exports = { Mosaic: Mosaic2 };

@@ -25,7 +25,8 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - `src/data/data-source.js` — `DataSource` base class
 - `src/data/sources/` — one file per data source
 - `src/data/data-source-factory.js` — `DataSourceFactory` registry
-- `src/app.js` — `Mosaic` entry point
+- `src/ui/` — `ConfigManager`'s alert flows (`config-ui.js`), the in-app source picker (`source-picker.js`), and widget chrome: footer, error widget + `classifyError`, presentation (`widget-chrome.js`)
+- `src/app.js` — `Mosaic` entry point (orchestration only)
 - `src/index.js` — composition root, re-exports, execution guard
 
 `StatusBoardDataSource` requires `DataSourceFactory` lazily inside `fetchData()` — the factory itself imports every source, so a top-level require would be a load-time cycle yielding `undefined`.
@@ -36,7 +37,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 - **`ImageCache`** — in-memory image cache with 5s timeout
 - **`CacheManager`** — JSON file cache in iCloud `widget-cache/` directory, 48h max age
 - **`RefreshManager`** — tracks fetch success/error per source, exponential backoff on refresh intervals (2^n, capped at 8x)
-- **`ConfigManager`** — loads/saves `widget-config.json` from iCloud (source-specific fields only), provides in-app setup UI via `Alert`. `apiToken` is stored in `Keychain`, not the iCloud JSON; `load()` migrates a legacy plaintext `apiToken` out of the JSON file on first run
+- **`ConfigManager`** — loads/saves `widget-config.json` from iCloud (source-specific fields only) and owns the `getEditableFields()` schema. `apiToken` is stored in `Keychain`, not the iCloud JSON; `load()` migrates a legacy plaintext `apiToken` out of the JSON file on first run. The `Alert` UI lives separately in `src/ui/config-ui.js`.
 - **`FormatUtils`** — static helpers: `truncate`, `formatNumber`, `formatTimeAgo`, `formatDuration`, `pluralize`, `formatTime`, `formatDateLabel`, `cleanTitle`, `stripHtml`
 - **`DataSource`** (base class) — subclasses must implement `fetchData(widgetSize)`, `isEmpty(data)`, `renderWidget(widget, data, widgetSize)`. Base provides `addHeader`, `addBadge`, `addSourceBadge`, `renderItemList`, `renderGrid`
 - **14 DataSource subclasses** — `BillboardDataSource`, `IMDbDataSource`, `SteamDataSource`, `HackerNewsDataSource`, `GitHubDataSource`, `WikipediaDataSource`, `TimelineDataSource`, `BookmarksDataSource`, `BooksDataSource`, `AstronomyDataSource`, `BlueskyDataSource`, `ActivityDataSource`, `StatusBoardDataSource`, `DHBWTimetableDataSource`
