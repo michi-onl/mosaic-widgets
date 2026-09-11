@@ -75,13 +75,13 @@ class BookmarksDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(item.title);
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     const urlText = textStack.addText(item.domain);
     urlText.font = Font.systemFont(sizes.fontSize.tertiary);
-    urlText.textColor = CONFIG.colors.tertiary;
+    urlText.textColor = CONFIG.colors.tertiaryLabel;
     urlText.lineLimit = 1;
   }
 }

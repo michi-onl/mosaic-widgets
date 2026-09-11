@@ -72,7 +72,7 @@ class SteamDataSource extends DataSource {
         SFSymbol.named("gamecontroller.fill").image,
       );
       icon.imageSize = new Size(imgSize.width, imgSize.height);
-      icon.tintColor = CONFIG.colors.secondary;
+      icon.tintColor = CONFIG.colors.secondaryLabel;
     }
 
     itemStack.addSpacer(sizes.spacing);
@@ -81,8 +81,8 @@ class SteamDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(game.name, 35));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     const metaText = textStack.addText(
@@ -91,7 +91,7 @@ class SteamDataSource extends DataSource {
       }`,
     );
     metaText.font = Font.systemFont(sizes.fontSize.secondary);
-    metaText.textColor = CONFIG.colors.secondary;
+    metaText.textColor = CONFIG.colors.secondaryLabel;
 
     itemStack.addSpacer();
   }

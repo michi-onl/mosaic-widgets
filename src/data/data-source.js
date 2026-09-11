@@ -1,5 +1,6 @@
 const { CONFIG } = require("../config.js");
 const { ImageCache } = require("../core/image-cache.js");
+const { addSeparator, addTag, typography } = require("../design-system.js");
 
 class DataSource {
   constructor(config, apiClient) {
@@ -31,42 +32,19 @@ class DataSource {
     headerStack.addSpacer(sizes.spacing);
 
     const titleText = headerStack.addText(title);
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = typography.title(sizes);
+    titleText.textColor = CONFIG.colors.label;
 
     if (options.subtitle) {
       headerStack.addSpacer(sizes.spacing);
       const sub = headerStack.addText(options.subtitle);
       sub.font = Font.systemFont(sizes.fontSize.tertiary);
-      sub.textColor = CONFIG.colors.secondary;
+      sub.textColor = CONFIG.colors.secondaryLabel;
     }
   }
 
   addBadge(parentStack, { text, icon, color, sizes }) {
-    const badge = parentStack.addStack();
-    badge.backgroundColor = color || CONFIG.colors.accent;
-    badge.cornerRadius = CONFIG.designTokens.cornerRadius.badge;
-    badge.setPadding(
-      CONFIG.designTokens.badge.paddingV,
-      CONFIG.designTokens.badge.paddingH,
-      CONFIG.designTokens.badge.paddingV,
-      CONFIG.designTokens.badge.paddingH,
-    );
-
-    if (icon) {
-      const img = badge.addImage(SFSymbol.named(icon).image);
-      img.imageSize = new Size(
-        sizes.fontSize.tertiary,
-        sizes.fontSize.tertiary,
-      );
-      img.tintColor = CONFIG.colors.white;
-    } else {
-      const label = badge.addText(text);
-      label.font = Font.mediumSystemFont(sizes.fontSize.tertiary);
-      label.textColor = CONFIG.colors.white;
-    }
-
-    return badge;
+    return addTag(parentStack, { text, icon, color, sizes });
   }
 
   addSourceBadge(stack, item, sizes) {
@@ -107,12 +85,7 @@ class DataSource {
       if (index < items.length - 1) {
         stack.addSpacer(sizes.spacing);
         if (useSeparators) {
-          const sep = stack.addStack();
-          sep.addSpacer();
-          const line = sep.addStack();
-          line.size = new Size(0, 0.5);
-          line.backgroundColor = CONFIG.colors.tertiary;
-          sep.addSpacer();
+          addSeparator(stack);
           stack.addSpacer(sizes.spacing);
         }
       }

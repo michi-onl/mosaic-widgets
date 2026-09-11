@@ -104,13 +104,13 @@ class IMDbDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(item.title, 30));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     const metaText = textStack.addText(item.subtitle);
     metaText.font = Font.systemFont(sizes.fontSize.secondary);
-    metaText.textColor = CONFIG.colors.secondary;
+    metaText.textColor = CONFIG.colors.secondaryLabel;
     metaText.lineLimit = 1;
 
     const badgeStack = textStack.addStack();

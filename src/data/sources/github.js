@@ -74,8 +74,8 @@ class GitHubDataSource extends DataSource {
     titleRow.centerAlignContent();
 
     const titleText = titleRow.addText(FormatUtils.truncate(item.tagName, 40));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     if (item.isPrerelease) {
@@ -87,12 +87,12 @@ class GitHubDataSource extends DataSource {
 
     const repoText = textStack.addText(item.repo);
     repoText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    repoText.textColor = CONFIG.colors.secondary;
+    repoText.textColor = CONFIG.colors.secondaryLabel;
     repoText.lineLimit = 1;
 
     const metaText = textStack.addText(`${item.author} · ${item.timeAgo}`);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.tertiary;
+    metaText.textColor = CONFIG.colors.tertiaryLabel;
     metaText.lineLimit = 1;
   }
 }

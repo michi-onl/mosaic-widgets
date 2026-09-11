@@ -93,25 +93,25 @@ class WikipediaDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(edit.title, 40));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     if (edit.comment && edit.comment !== "N/A") {
       const commentText = textStack.addText(edit.comment);
       commentText.font = Font.systemFont(sizes.fontSize.secondary);
-      commentText.textColor = CONFIG.colors.secondary;
+      commentText.textColor = CONFIG.colors.secondaryLabel;
       commentText.lineLimit = 1;
     }
 
     const userText = textStack.addText(edit.user);
     userText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    userText.textColor = CONFIG.colors.secondary;
+    userText.textColor = CONFIG.colors.secondaryLabel;
     userText.lineLimit = 1;
 
     const timeText = textStack.addText(edit.timeAgo);
     timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-    timeText.textColor = CONFIG.colors.tertiary;
+    timeText.textColor = CONFIG.colors.tertiaryLabel;
     timeText.lineLimit = 1;
   }
 }

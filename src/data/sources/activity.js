@@ -95,13 +95,13 @@ class ActivityDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(item.title, 45));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     const metaText = textStack.addText(item.detail);
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.tertiary;
+    metaText.textColor = CONFIG.colors.tertiaryLabel;
     metaText.lineLimit = 1;
   }
 }

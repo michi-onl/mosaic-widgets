@@ -20,7 +20,8 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 
 ### Module layout
 
-- `src/config.js` — `CONFIG`
+- `src/config.js` — `CONFIG`, including the semantic color palette and type scale
+- `src/design-system.js` — render primitives: `typography.*(sizes)`, `addSeparator`, `addTag`, `addGlassSurface`
 - `src/core/` — `APIClient`, `ImageCache`, `CacheManager`, `RefreshManager`, `ConfigManager`, `FormatUtils`
 - `src/data/data-source.js` — `DataSource` base class
 - `src/data/sources/` — one file per data source
@@ -68,12 +69,18 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 
 ## Design Conventions
 
-- **Design tokens** live in `CONFIG.designTokens` (badge corner radius, padding, compact spacing). Use these instead of hardcoded values.
-- **Badges** use `DataSource.addBadge()` for colored rounded-rect labels. Plain styled text labels (like GitHub pre-release) stay inline.
+Design system v2 is Apple-native / SF-clean; the spec is `docs/design-system-v2.md` (local, gitignored). Tokens live in `CONFIG.colors`, `CONFIG.sizing.<family>.fontSize`, `CONFIG.images`, and `CONFIG.designTokens`.
+
+- **Semantic colors only**: `CONFIG.colors.label` / `secondaryLabel` / `tertiaryLabel` / `quaternaryLabel`, `separator`, `fill`, plus `accent` (systemBlue) and status colors. Color is identity/status, never decoration.
+- **Typography via helpers**: use `typography.title/body/footnote/caption(sizes)` from `src/design-system.js` rather than calling `Font.*` with a hardcoded weight. Titles are semibold, not bold.
+- **Tags/badges** use `DataSource.addBadge()` (delegates to `addTag`): neutral translucent `fill` capsule with a colored label or glyph. Plain styled text labels (like GitHub pre-release) stay inline.
+- **Separators** use `addSeparator()`/the `separator` token (0.5pt), not `tertiaryLabel`.
+- **Radii** are concentric: `designTokens.cornerRadius` = `{ badge: 6, control: 10, card: 12, icon: 4, cover: 8 }`.
 - **`addHeader()`** accepts optional `options` object with `subtitle` for filtered views. Do not add item counts to headers.
 - **Footers**: medium (compact, time only) and large (time + offline text). Small widgets have no footer.
 - **Error widget** is size-aware — always pass `widgetSize` to `createErrorWidget()`.
-- **Separators** (`renderItemList` with `useSeparators = true`) are for text-heavy list widgets without visual anchors. Avoid in multi-column layouts.
+- **Separators usage**: `renderItemList` with `useSeparators = true` is for text-heavy list widgets without visual anchors. Avoid in multi-column layouts.
+- **Liquid Glass**: a `ListWidget` cannot blur; iOS already renders the widget as a material. Keep content first and use `addGlassSurface()` only for small grouping surfaces.
 - **TimelineDataSource** and **ActivityDataSource** have `static sourceIcons` and `static sourceColors` mapping internal source types — these are class properties, not user config. `DataSource.addSourceBadge()` reads these via `this.constructor.sourceIcons/sourceColors`.
 - **Per-source header tint**: `CONFIG.sources.<name>.color` (a `Color`, usually the service's own brand color) tints that source's header icon via `addHeader()` and its Status Board row icon. Omit it for aggregator sources (Timeline, Activity, StatusBoard) and ones already color-coded per-row (DHBW Timetable) — falls back to `CONFIG.colors.accent`.
 

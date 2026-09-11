@@ -76,20 +76,20 @@ class BlueskyDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(FormatUtils.truncate(item.text, 60));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 2;
 
     const authorText = textStack.addText(item.author);
     authorText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    authorText.textColor = CONFIG.colors.secondary;
+    authorText.textColor = CONFIG.colors.secondaryLabel;
     authorText.lineLimit = 1;
 
     const metaText = textStack.addText(
       `${item.likes} likes · ${item.replies} replies`,
     );
     metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-    metaText.textColor = CONFIG.colors.tertiary;
+    metaText.textColor = CONFIG.colors.tertiaryLabel;
     metaText.lineLimit = 1;
   }
 }

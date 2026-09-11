@@ -12,31 +12,83 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
 // src/config.js
 var require_config = __commonJS({
   "src/config.js"(exports2, module2) {
+    var label = Color.dynamic(new Color("#000000"), new Color("#FFFFFF"));
+    var secondaryLabel = Color.dynamic(
+      new Color("#3C3C43", 0.6),
+      new Color("#EBEBF5", 0.6)
+    );
+    var tertiaryLabel = Color.dynamic(
+      new Color("#3C3C43", 0.3),
+      new Color("#EBEBF5", 0.3)
+    );
+    var quaternaryLabel = Color.dynamic(
+      new Color("#3C3C43", 0.18),
+      new Color("#EBEBF5", 0.18)
+    );
+    var COLORS = {
+      // Semantic label hierarchy
+      label,
+      secondaryLabel,
+      tertiaryLabel,
+      quaternaryLabel,
+      separator: Color.dynamic(
+        new Color("#3C3C43", 0.29),
+        new Color("#545458", 0.65)
+      ),
+      fill: Color.dynamic(new Color("#787880", 0.12), new Color("#787880", 0.24)),
+      // Accent and status (system colors)
+      accent: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+      warning: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+      new: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+      up: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+      down: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")),
+      unchanged: tertiaryLabel,
+      sunset: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+      golden: Color.dynamic(new Color("#FFCC00"), new Color("#FFD60A")),
+      white: Color.white(),
+      // Steam status indicators
+      steamStatus: {
+        online: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+        "in-game": Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+        offline: Color.dynamic(new Color("#8E8E93"), new Color("#8E8E93")),
+        private: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A"))
+      },
+      dhbwTypes: {
+        Vorlesung: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+        \u00DCbung: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+        Labor: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+        Praktikum: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+        Seminar: Color.dynamic(new Color("#AF52DE"), new Color("#BF5AF2")),
+        Tutorium: Color.dynamic(new Color("#5856D6"), new Color("#5E5CE6")),
+        Klausur: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")),
+        Pr\u00FCfung: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A"))
+      }
+    };
     var CONFIG2 = {
       // Default settings
       defaultSource: "billboard",
       apiBaseUrl: "https://api.michi.onl/api",
       apiToken: "",
       // Set via in-app "API Token" setup UI; stored in Keychain
-      // Widget sizing configuration
+      // Widget sizing. Type scale follows SF text styles, compacted for widgets.
       sizing: {
         small: {
           maxItems: 4,
-          fontSize: { primary: 12, secondary: 10, tertiary: 9, caption: 8 },
+          fontSize: { title: 13, primary: 13, secondary: 11, tertiary: 10, caption: 9 },
           iconSize: 14,
-          spacing: 5,
+          spacing: 6,
           padding: 14
         },
         medium: {
           maxItems: 4,
-          fontSize: { primary: 14, secondary: 12, tertiary: 10, caption: 9 },
+          fontSize: { title: 15, primary: 15, secondary: 13, tertiary: 11, caption: 10 },
           iconSize: 16,
           spacing: 8,
           padding: 16
         },
         large: {
           maxItems: 12,
-          fontSize: { primary: 16, secondary: 13, tertiary: 11, caption: 10 },
+          fontSize: { title: 17, primary: 17, secondary: 15, tertiary: 13, caption: 11 },
           iconSize: 18,
           spacing: 10,
           padding: 18
@@ -60,48 +112,11 @@ var require_config = __commonJS({
           large: { width: 80, height: 120, cornerRadius: 8 }
         }
       },
-      // Color scheme following iOS system design
-      colors: {
-        // Dynamic colors that adapt to light/dark mode
-        primary: Color.dynamic(new Color("#000000"), new Color("#FFFFFF")),
-        secondary: Color.dynamic(new Color("#8E8E93"), new Color("#8E8E93")),
-        secondaryBright: Color.dynamic(new Color("#8E8E93"), new Color("#AEAEB2")),
-        tertiary: Color.dynamic(new Color("#C7C7CC"), new Color("#636366")),
-        // Semantic colors
-        accent: new Color("#007AFF"),
-        warning: new Color("#FF9500"),
-        // Status indicators
-        new: new Color("#FF9500"),
-        up: new Color("#34C759"),
-        down: new Color("#FF3B30"),
-        unchanged: Color.dynamic(new Color("#8E8E93"), new Color("#636366")),
-        sunset: new Color("#FF6B35"),
-        golden: new Color("#FFD700"),
-        white: Color.white(),
-        // Steam status indicators (moved from SteamDataSource.statusColors)
-        steamStatus: {
-          online: new Color("#34C759"),
-          "in-game": new Color("#34C759"),
-          offline: new Color("#8E8E93"),
-          private: new Color("#FF9500")
-        },
-        dhbwTypes: {
-          Vorlesung: new Color("#007AFF"),
-          \u00DCbung: new Color("#34C759"),
-          Labor: new Color("#FF9500"),
-          Praktikum: new Color("#FF9500"),
-          Seminar: new Color("#AF52DE"),
-          Tutorium: new Color("#5856D6"),
-          Klausur: new Color("#FF3B30"),
-          Pr\u00FCfung: new Color("#FF3B30")
-        }
-      },
-      // Shared design tokens for badges, radii, and spacing
+      colors: COLORS,
+      // Concentric radius system + shared spacing
       designTokens: {
-        // badge radius set generously above half the tallest badge's height so it
-        // always renders as a fully rounded pill, not a rounded rectangle
-        cornerRadius: { badge: 8, icon: 3, cover: 6 },
-        badge: { paddingV: 3, paddingH: 7 },
+        cornerRadius: { badge: 6, control: 10, card: 12, icon: 4, cover: 8 },
+        badge: { paddingV: 3, paddingH: 8 },
         compactSpacing: 4
       },
       messages: {
@@ -694,11 +709,69 @@ var require_config_manager = __commonJS({
   }
 });
 
+// src/design-system.js
+var require_design_system = __commonJS({
+  "src/design-system.js"(exports2, module2) {
+    var { CONFIG: CONFIG2 } = require_config();
+    var typography = {
+      title: (sizes) => Font.semiboldSystemFont(sizes.fontSize.title || sizes.fontSize.primary),
+      body: (sizes) => Font.regularSystemFont(sizes.fontSize.secondary),
+      footnote: (sizes) => Font.regularSystemFont(sizes.fontSize.tertiary),
+      caption: (sizes) => Font.regularSystemFont(sizes.fontSize.caption)
+    };
+    function addSeparator(stack, { inset = 0 } = {}) {
+      const row = stack.addStack();
+      row.layoutHorizontally();
+      if (inset > 0) row.addSpacer(inset);
+      const line = row.addStack();
+      line.size = new Size(0, 0.5);
+      line.backgroundColor = CONFIG2.colors.separator;
+      row.addSpacer();
+      return row;
+    }
+    function addTag(parentStack, { text, icon, color, sizes }) {
+      const tag = parentStack.addStack();
+      tag.backgroundColor = CONFIG2.colors.fill;
+      tag.cornerRadius = CONFIG2.designTokens.cornerRadius.badge;
+      tag.setPadding(
+        CONFIG2.designTokens.badge.paddingV,
+        CONFIG2.designTokens.badge.paddingH,
+        CONFIG2.designTokens.badge.paddingV,
+        CONFIG2.designTokens.badge.paddingH
+      );
+      const tint = color || CONFIG2.colors.accent;
+      if (icon) {
+        const img = tag.addImage(SFSymbol.named(icon).image);
+        img.imageSize = new Size(sizes.fontSize.caption, sizes.fontSize.caption);
+        img.tintColor = tint;
+      } else {
+        const label = tag.addText(text);
+        label.font = Font.mediumSystemFont(sizes.fontSize.caption);
+        label.textColor = tint;
+      }
+      return tag;
+    }
+    function addGlassSurface(stack) {
+      stack.backgroundColor = CONFIG2.colors.fill;
+      stack.cornerRadius = CONFIG2.designTokens.cornerRadius.card;
+      stack.setPadding(
+        CONFIG2.designTokens.compactSpacing,
+        CONFIG2.designTokens.compactSpacing,
+        CONFIG2.designTokens.compactSpacing,
+        CONFIG2.designTokens.compactSpacing
+      );
+      return stack;
+    }
+    module2.exports = { typography, addSeparator, addTag, addGlassSurface };
+  }
+});
+
 // src/data/data-source.js
 var require_data_source = __commonJS({
   "src/data/data-source.js"(exports2, module2) {
     var { CONFIG: CONFIG2 } = require_config();
     var { ImageCache: ImageCache2 } = require_image_cache();
+    var { addSeparator, addTag, typography } = require_design_system();
     var DataSource2 = class {
       constructor(config2, apiClient) {
         this.config = config2;
@@ -722,38 +795,17 @@ var require_data_source = __commonJS({
         icon.tintColor = this.config.color || CONFIG2.colors.accent;
         headerStack.addSpacer(sizes.spacing);
         const titleText = headerStack.addText(title);
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = typography.title(sizes);
+        titleText.textColor = CONFIG2.colors.label;
         if (options.subtitle) {
           headerStack.addSpacer(sizes.spacing);
           const sub = headerStack.addText(options.subtitle);
           sub.font = Font.systemFont(sizes.fontSize.tertiary);
-          sub.textColor = CONFIG2.colors.secondary;
+          sub.textColor = CONFIG2.colors.secondaryLabel;
         }
       }
       addBadge(parentStack, { text, icon, color, sizes }) {
-        const badge = parentStack.addStack();
-        badge.backgroundColor = color || CONFIG2.colors.accent;
-        badge.cornerRadius = CONFIG2.designTokens.cornerRadius.badge;
-        badge.setPadding(
-          CONFIG2.designTokens.badge.paddingV,
-          CONFIG2.designTokens.badge.paddingH,
-          CONFIG2.designTokens.badge.paddingV,
-          CONFIG2.designTokens.badge.paddingH
-        );
-        if (icon) {
-          const img = badge.addImage(SFSymbol.named(icon).image);
-          img.imageSize = new Size(
-            sizes.fontSize.tertiary,
-            sizes.fontSize.tertiary
-          );
-          img.tintColor = CONFIG2.colors.white;
-        } else {
-          const label = badge.addText(text);
-          label.font = Font.mediumSystemFont(sizes.fontSize.tertiary);
-          label.textColor = CONFIG2.colors.white;
-        }
-        return badge;
+        return addTag(parentStack, { text, icon, color, sizes });
       }
       addSourceBadge(stack, item, sizes) {
         const icons = this.constructor.sourceIcons || {};
@@ -784,12 +836,7 @@ var require_data_source = __commonJS({
           if (index < items.length - 1) {
             stack.addSpacer(sizes.spacing);
             if (useSeparators) {
-              const sep = stack.addStack();
-              sep.addSpacer();
-              const line = sep.addStack();
-              line.size = new Size(0, 0.5);
-              line.backgroundColor = CONFIG2.colors.tertiary;
-              sep.addSpacer();
+              addSeparator(stack);
               stack.addSpacer(sizes.spacing);
             }
           }
@@ -888,8 +935,8 @@ var require_billboard = __commonJS({
         titleRow.layoutHorizontally();
         titleRow.centerAlignContent();
         const titleText = titleRow.addText(FormatUtils2.truncate(item.title, 28));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         titleRow.addSpacer(sizes.spacing);
         const { char, color } = _BillboardDataSource.getTrend(
@@ -903,14 +950,14 @@ var require_billboard = __commonJS({
           FormatUtils2.truncate(item.subtitle, 30)
         );
         subtitleText.font = Font.systemFont(sizes.fontSize.secondary);
-        subtitleText.textColor = CONFIG2.colors.secondary;
+        subtitleText.textColor = CONFIG2.colors.secondaryLabel;
         subtitleText.lineLimit = 1;
         if (item.metadata.weeks) {
           const metaText = textStack.addText(
             FormatUtils2.pluralize(item.metadata.weeks, "week")
           );
           metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-          metaText.textColor = CONFIG2.colors.tertiary;
+          metaText.textColor = CONFIG2.colors.tertiaryLabel;
         }
         itemStack.addSpacer();
       }
@@ -996,12 +1043,12 @@ var require_imdb = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(item.title, 30));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         const metaText = textStack.addText(item.subtitle);
         metaText.font = Font.systemFont(sizes.fontSize.secondary);
-        metaText.textColor = CONFIG2.colors.secondary;
+        metaText.textColor = CONFIG2.colors.secondaryLabel;
         metaText.lineLimit = 1;
         const badgeStack = textStack.addStack();
         badgeStack.addSpacer(2);
@@ -1080,20 +1127,20 @@ var require_steam = __commonJS({
             SFSymbol.named("gamecontroller.fill").image
           );
           icon.imageSize = new Size(imgSize.width, imgSize.height);
-          icon.tintColor = CONFIG2.colors.secondary;
+          icon.tintColor = CONFIG2.colors.secondaryLabel;
         }
         itemStack.addSpacer(sizes.spacing);
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(game.name, 35));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         const metaText = textStack.addText(
           `${FormatUtils2.formatDuration(game.hoursPlayed)} \u2022 ${game.lastPlayedShort}`
         );
         metaText.font = Font.systemFont(sizes.fontSize.secondary);
-        metaText.textColor = CONFIG2.colors.secondary;
+        metaText.textColor = CONFIG2.colors.secondaryLabel;
         itemStack.addSpacer();
       }
     };
@@ -1143,14 +1190,14 @@ var require_hacker_news = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(story.title, 60));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         const metaText = textStack.addText(
           `${story.points}pts \xB7 ${story.comments}cmt`
         );
         metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-        metaText.textColor = CONFIG2.colors.tertiary;
+        metaText.textColor = CONFIG2.colors.tertiaryLabel;
         metaText.lineLimit = 1;
         itemStack.addSpacer();
       }
@@ -1223,8 +1270,8 @@ var require_github = __commonJS({
         titleRow.layoutHorizontally();
         titleRow.centerAlignContent();
         const titleText = titleRow.addText(FormatUtils2.truncate(item.tagName, 40));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         if (item.isPrerelease) {
           titleRow.addSpacer(4);
@@ -1234,11 +1281,11 @@ var require_github = __commonJS({
         }
         const repoText = textStack.addText(item.repo);
         repoText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-        repoText.textColor = CONFIG2.colors.secondary;
+        repoText.textColor = CONFIG2.colors.secondaryLabel;
         repoText.lineLimit = 1;
         const metaText = textStack.addText(`${item.author} \xB7 ${item.timeAgo}`);
         metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-        metaText.textColor = CONFIG2.colors.tertiary;
+        metaText.textColor = CONFIG2.colors.tertiaryLabel;
         metaText.lineLimit = 1;
       }
     };
@@ -1322,22 +1369,22 @@ var require_wikipedia = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(edit.title, 40));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         if (edit.comment && edit.comment !== "N/A") {
           const commentText = textStack.addText(edit.comment);
           commentText.font = Font.systemFont(sizes.fontSize.secondary);
-          commentText.textColor = CONFIG2.colors.secondary;
+          commentText.textColor = CONFIG2.colors.secondaryLabel;
           commentText.lineLimit = 1;
         }
         const userText = textStack.addText(edit.user);
         userText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-        userText.textColor = CONFIG2.colors.secondary;
+        userText.textColor = CONFIG2.colors.secondaryLabel;
         userText.lineLimit = 1;
         const timeText = textStack.addText(edit.timeAgo);
         timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-        timeText.textColor = CONFIG2.colors.tertiary;
+        timeText.textColor = CONFIG2.colors.tertiaryLabel;
         timeText.lineLimit = 1;
       }
     };
@@ -1393,12 +1440,12 @@ var require_timeline = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(event.title);
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 2;
         const timeText = textStack.addText(FormatUtils2.formatTimeAgo(event.date));
         timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-        timeText.textColor = CONFIG2.colors.secondary;
+        timeText.textColor = CONFIG2.colors.secondaryLabel;
         itemStack.addSpacer();
       }
     };
@@ -1479,12 +1526,12 @@ var require_bookmarks = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(item.title);
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         const urlText = textStack.addText(item.domain);
         urlText.font = Font.systemFont(sizes.fontSize.tertiary);
-        urlText.textColor = CONFIG2.colors.tertiary;
+        urlText.textColor = CONFIG2.colors.tertiaryLabel;
         urlText.lineLimit = 1;
       }
     };
@@ -1554,12 +1601,12 @@ var require_books = __commonJS({
         const infoStack = bodyStack.addStack();
         infoStack.layoutVertically();
         const titleText = infoStack.addText(FormatUtils2.truncate(data.title, 40));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 2;
         const authorsText = infoStack.addText(data.authors);
         authorsText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-        authorsText.textColor = CONFIG2.colors.secondary;
+        authorsText.textColor = CONFIG2.colors.secondaryLabel;
         authorsText.lineLimit = 1;
         if (widgetSize !== "small") {
           infoStack.addSpacer(sizes.spacing);
@@ -1567,13 +1614,13 @@ var require_books = __commonJS({
             `${data.pageCount} pages \xB7 ${data.publisher}, ${data.publishedDate}`
           );
           detailText.font = Font.systemFont(sizes.fontSize.tertiary);
-          detailText.textColor = CONFIG2.colors.tertiary;
+          detailText.textColor = CONFIG2.colors.tertiaryLabel;
           detailText.lineLimit = 1;
           const metaText = infoStack.addText(
             `${data.categories} \xB7 ${data.language}`
           );
           metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-          metaText.textColor = CONFIG2.colors.tertiary;
+          metaText.textColor = CONFIG2.colors.tertiaryLabel;
         }
         if (widgetSize === "small" && data.coverImage) {
           infoStack.addSpacer(sizes.spacing);
@@ -1706,7 +1753,7 @@ var require_astronomy = __commonJS({
         row.addSpacer(CONFIG2.designTokens.compactSpacing);
         const sunriseText = row.addText(FormatUtils2.formatTime(data.sunrise));
         sunriseText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-        sunriseText.textColor = CONFIG2.colors.primary;
+        sunriseText.textColor = CONFIG2.colors.label;
         row.addSpacer(sizes.spacing * 2);
         const sunsetIcon = row.addImage(SFSymbol.named("sunset.fill").image);
         sunsetIcon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
@@ -1714,7 +1761,7 @@ var require_astronomy = __commonJS({
         row.addSpacer(CONFIG2.designTokens.compactSpacing);
         const sunsetText = row.addText(FormatUtils2.formatTime(data.sunset));
         sunsetText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-        sunsetText.textColor = CONFIG2.colors.primary;
+        sunsetText.textColor = CONFIG2.colors.label;
       }
       renderMoonRow(stack, data, sizes) {
         const row = stack.addStack();
@@ -1723,15 +1770,15 @@ var require_astronomy = __commonJS({
         const moonInfo = this.getMoonPhaseInfo(data.moonPhase);
         const moonIcon = row.addImage(SFSymbol.named(moonInfo.icon).image);
         moonIcon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
-        moonIcon.tintColor = CONFIG2.colors.primary;
+        moonIcon.tintColor = CONFIG2.colors.label;
         row.addSpacer(CONFIG2.designTokens.compactSpacing);
         const moonText = row.addText(moonInfo.name);
         moonText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-        moonText.textColor = CONFIG2.colors.primary;
+        moonText.textColor = CONFIG2.colors.label;
         row.addSpacer(sizes.spacing);
         const pctText = row.addText(`${Math.round(data.moonPhase * 100)}%`);
         pctText.font = Font.systemFont(sizes.fontSize.tertiary);
-        pctText.textColor = CONFIG2.colors.secondary;
+        pctText.textColor = CONFIG2.colors.secondaryLabel;
       }
       renderUvRow(stack, data, sizes) {
         const row = stack.addStack();
@@ -1743,7 +1790,7 @@ var require_astronomy = __commonJS({
         row.addSpacer(CONFIG2.designTokens.compactSpacing);
         const label = row.addText("UV Index");
         label.font = Font.systemFont(sizes.fontSize.secondary);
-        label.textColor = CONFIG2.colors.secondary;
+        label.textColor = CONFIG2.colors.secondaryLabel;
         row.addSpacer(sizes.spacing);
         const uvValue = Math.round(data.uvIndex);
         const uvColor = uvValue >= 6 ? CONFIG2.colors.down : uvValue >= 3 ? CONFIG2.colors.warning : CONFIG2.colors.up;
@@ -1763,7 +1810,7 @@ var require_astronomy = __commonJS({
         const eveningText = `${FormatUtils2.formatTime(data.goldenEvening.start)}\u2013${FormatUtils2.formatTime(data.goldenEvening.end)}`;
         const text = row.addText(`\u2191 ${morningText}  \u2193 ${eveningText}`);
         text.font = Font.systemFont(sizes.fontSize.secondary);
-        text.textColor = CONFIG2.colors.primary;
+        text.textColor = CONFIG2.colors.label;
       }
       renderTemperatureRow(stack, data, sizes) {
         if (data.temperature === void 0) return;
@@ -1776,7 +1823,7 @@ var require_astronomy = __commonJS({
         row.addSpacer(CONFIG2.designTokens.compactSpacing);
         const tempText = row.addText(`${Math.round(data.temperature)}\xB0C`);
         tempText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-        tempText.textColor = CONFIG2.colors.primary;
+        tempText.textColor = CONFIG2.colors.label;
       }
     };
     __publicField(_AstronomyDataSource, "moonPhases", [
@@ -1858,18 +1905,18 @@ var require_bluesky = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(item.text, 60));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 2;
         const authorText = textStack.addText(item.author);
         authorText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-        authorText.textColor = CONFIG2.colors.secondary;
+        authorText.textColor = CONFIG2.colors.secondaryLabel;
         authorText.lineLimit = 1;
         const metaText = textStack.addText(
           `${item.likes} likes \xB7 ${item.replies} replies`
         );
         metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-        metaText.textColor = CONFIG2.colors.tertiary;
+        metaText.textColor = CONFIG2.colors.tertiaryLabel;
         metaText.lineLimit = 1;
       }
     };
@@ -1943,12 +1990,12 @@ var require_activity = __commonJS({
         const textStack = itemStack.addStack();
         textStack.layoutVertically();
         const titleText = textStack.addText(FormatUtils2.truncate(item.title, 45));
-        titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        titleText.textColor = CONFIG2.colors.primary;
+        titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        titleText.textColor = CONFIG2.colors.label;
         titleText.lineLimit = 1;
         const metaText = textStack.addText(item.detail);
         metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-        metaText.textColor = CONFIG2.colors.tertiary;
+        metaText.textColor = CONFIG2.colors.tertiaryLabel;
         metaText.lineLimit = 1;
       }
     };
@@ -2059,22 +2106,22 @@ var require_status_board = __commonJS({
         if (source.error) {
           const errorText = row.addText(source.config?.name || source.name);
           errorText.font = Font.systemFont(sizes.fontSize.secondary);
-          errorText.textColor = CONFIG2.colors.tertiary;
+          errorText.textColor = CONFIG2.colors.tertiaryLabel;
         } else if (source.topItem) {
           const textStack = row.addStack();
           textStack.layoutVertically();
           const itemText = textStack.addText(
             FormatUtils2.truncate(source.topItem, widgetSize === "small" ? 30 : 60)
           );
-          itemText.font = Font.boldSystemFont(sizes.fontSize.primary);
-          itemText.textColor = CONFIG2.colors.primary;
+          itemText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+          itemText.textColor = CONFIG2.colors.label;
           itemText.lineLimit = 1;
         } else {
           const emptyText = row.addText(
             `${source.config?.name || source.name} \u2014 no data`
           );
           emptyText.font = Font.systemFont(sizes.fontSize.secondary);
-          emptyText.textColor = CONFIG2.colors.tertiary;
+          emptyText.textColor = CONFIG2.colors.tertiaryLabel;
         }
       }
     };
@@ -2150,7 +2197,7 @@ var require_dhbw_timetable = __commonJS({
         if (data.events.length === 0) {
           const emptyText = widget.addText("No upcoming events");
           emptyText.font = Font.systemFont(sizes.fontSize.secondary);
-          emptyText.textColor = CONFIG2.colors.secondary;
+          emptyText.textColor = CONFIG2.colors.secondaryLabel;
           emptyText.centerAlignText();
           return;
         }
@@ -2169,7 +2216,7 @@ var require_dhbw_timetable = __commonJS({
             const dateLabel = contentStack.addText(
               FormatUtils2.formatDateLabel(event.date, today, tomorrow)
             );
-            dateLabel.font = Font.boldSystemFont(sizes.fontSize.secondary);
+            dateLabel.font = Font.semiboldSystemFont(sizes.fontSize.secondary);
             dateLabel.textColor = CONFIG2.colors.accent;
             contentStack.addSpacer(CONFIG2.designTokens.compactSpacing);
             lastDate = event.date;
@@ -2194,11 +2241,11 @@ var require_dhbw_timetable = __commonJS({
           FormatUtils2.formatTime(event.startTime)
         );
         startText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-        startText.textColor = CONFIG2.colors.primary;
+        startText.textColor = CONFIG2.colors.label;
         startText.rightAlignText();
         const endText = timeColumn.addText(FormatUtils2.formatTime(event.endTime));
         endText.font = Font.systemFont(sizes.fontSize.tertiary);
-        endText.textColor = CONFIG2.colors.secondary;
+        endText.textColor = CONFIG2.colors.secondaryLabel;
         endText.rightAlignText();
         if (widgetSize !== "small") {
           const divider = itemStack.addStack();
@@ -2222,8 +2269,8 @@ var require_dhbw_timetable = __commonJS({
         titleRow.layoutHorizontally();
         titleRow.centerAlignContent();
         const nameText = titleRow.addText(FormatUtils2.truncate(event.name, 30));
-        nameText.font = Font.boldSystemFont(sizes.fontSize.primary);
-        nameText.textColor = CONFIG2.colors.primary;
+        nameText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+        nameText.textColor = CONFIG2.colors.label;
         nameText.lineLimit = 1;
         if (event.type) {
           titleRow.addSpacer(CONFIG2.designTokens.compactSpacing);
@@ -2243,7 +2290,7 @@ var require_dhbw_timetable = __commonJS({
         if (detailParts.length > 0) {
           const detailText = textStack.addText(detailParts.join(" \xB7 "));
           detailText.font = Font.systemFont(sizes.fontSize.tertiary);
-          detailText.textColor = CONFIG2.colors.secondary;
+          detailText.textColor = CONFIG2.colors.secondaryLabel;
           detailText.lineLimit = 1;
         }
         itemStack.addSpacer();
@@ -2418,6 +2465,7 @@ var require_source_picker = __commonJS({
 var require_widget_chrome = __commonJS({
   "src/ui/widget-chrome.js"(exports2, module2) {
     var { CONFIG: CONFIG2 } = require_config();
+    var { addSeparator, typography } = require_design_system();
     var ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40 };
     function classifyError(message) {
       const msg = (message || "").toLowerCase();
@@ -2448,30 +2496,28 @@ var require_widget_chrome = __commonJS({
       icon.tintColor = CONFIG2.colors.warning;
       stack.addSpacer(sizes.spacing);
       const errorText = stack.addText(`${sourceName} ${classifyError(message)}`);
-      errorText.font = Font.boldSystemFont(sizes.fontSize.primary);
-      errorText.textColor = CONFIG2.colors.primary;
+      errorText.font = typography.title(sizes);
+      errorText.textColor = CONFIG2.colors.label;
       errorText.centerAlignText();
       if (widgetSize !== "small") {
         stack.addSpacer(CONFIG2.designTokens.compactSpacing);
         const messageText = stack.addText(message);
-        messageText.font = Font.systemFont(sizes.fontSize.tertiary);
-        messageText.textColor = CONFIG2.colors.secondary;
+        messageText.font = typography.footnote(sizes);
+        messageText.textColor = CONFIG2.colors.secondaryLabel;
         messageText.centerAlignText();
       }
       stack.addSpacer(
         widgetSize === "small" ? CONFIG2.designTokens.compactSpacing : sizes.spacing
       );
       const hintText = stack.addText(CONFIG2.messages.tapRetry);
-      hintText.font = Font.systemFont(sizes.fontSize.tertiary);
-      hintText.textColor = CONFIG2.colors.tertiary;
+      hintText.font = typography.footnote(sizes);
+      hintText.textColor = CONFIG2.colors.tertiaryLabel;
       hintText.centerAlignText();
       return widget;
     }
     function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
       widget.addSpacer();
-      const sep = widget.addStack();
-      sep.size = new Size(0, 0.5);
-      sep.backgroundColor = CONFIG2.colors.tertiary;
+      addSeparator(widget);
       widget.addSpacer(CONFIG2.designTokens.compactSpacing);
       const footer = widget.addStack();
       footer.layoutHorizontally();
@@ -2482,8 +2528,8 @@ var require_widget_chrome = __commonJS({
       const prefix = widgetSize === "large" ? "Updated " : "";
       const timeString = `${prefix}${hours}:${minutes}`;
       const timeText = footer.addText(timeString);
-      timeText.font = Font.systemFont(sizes.fontSize.caption);
-      timeText.textColor = CONFIG2.colors.tertiary;
+      timeText.font = typography.caption(sizes);
+      timeText.textColor = CONFIG2.colors.tertiaryLabel;
       if (usingCache && widgetSize !== "small") {
         footer.addSpacer();
         const offlineIcon = footer.addImage(SFSymbol.named("icloud.slash").image);
@@ -2495,7 +2541,7 @@ var require_widget_chrome = __commonJS({
         if (widgetSize === "large") {
           footer.addSpacer(CONFIG2.designTokens.compactSpacing);
           const offlineText = footer.addText(CONFIG2.messages.offline);
-          offlineText.font = Font.systemFont(sizes.fontSize.caption);
+          offlineText.font = typography.caption(sizes);
           offlineText.textColor = CONFIG2.colors.warning;
         }
       }

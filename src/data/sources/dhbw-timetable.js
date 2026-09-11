@@ -56,7 +56,7 @@ class DHBWTimetableDataSource extends DataSource {
     if (data.events.length === 0) {
       const emptyText = widget.addText("No upcoming events");
       emptyText.font = Font.systemFont(sizes.fontSize.secondary);
-      emptyText.textColor = CONFIG.colors.secondary;
+      emptyText.textColor = CONFIG.colors.secondaryLabel;
       emptyText.centerAlignText();
       return;
     }
@@ -78,7 +78,7 @@ class DHBWTimetableDataSource extends DataSource {
         const dateLabel = contentStack.addText(
           FormatUtils.formatDateLabel(event.date, today, tomorrow),
         );
-        dateLabel.font = Font.boldSystemFont(sizes.fontSize.secondary);
+        dateLabel.font = Font.semiboldSystemFont(sizes.fontSize.secondary);
         dateLabel.textColor = CONFIG.colors.accent;
         contentStack.addSpacer(CONFIG.designTokens.compactSpacing);
         lastDate = event.date;
@@ -108,12 +108,12 @@ class DHBWTimetableDataSource extends DataSource {
       FormatUtils.formatTime(event.startTime),
     );
     startText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    startText.textColor = CONFIG.colors.primary;
+    startText.textColor = CONFIG.colors.label;
     startText.rightAlignText();
 
     const endText = timeColumn.addText(FormatUtils.formatTime(event.endTime));
     endText.font = Font.systemFont(sizes.fontSize.tertiary);
-    endText.textColor = CONFIG.colors.secondary;
+    endText.textColor = CONFIG.colors.secondaryLabel;
     endText.rightAlignText();
 
     // The color dot and the type badge below both encode event.type by color;
@@ -146,8 +146,8 @@ class DHBWTimetableDataSource extends DataSource {
     titleRow.centerAlignContent();
 
     const nameText = titleRow.addText(FormatUtils.truncate(event.name, 30));
-    nameText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    nameText.textColor = CONFIG.colors.primary;
+    nameText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    nameText.textColor = CONFIG.colors.label;
     nameText.lineLimit = 1;
 
     if (event.type) {
@@ -169,7 +169,7 @@ class DHBWTimetableDataSource extends DataSource {
     if (detailParts.length > 0) {
       const detailText = textStack.addText(detailParts.join(" · "));
       detailText.font = Font.systemFont(sizes.fontSize.tertiary);
-      detailText.textColor = CONFIG.colors.secondary;
+      detailText.textColor = CONFIG.colors.secondaryLabel;
       detailText.lineLimit = 1;
     }
 

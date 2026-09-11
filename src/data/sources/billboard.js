@@ -76,8 +76,8 @@ class BillboardDataSource extends DataSource {
     titleRow.centerAlignContent();
 
     const titleText = titleRow.addText(FormatUtils.truncate(item.title, 28));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 1;
 
     titleRow.addSpacer(sizes.spacing);
@@ -93,7 +93,7 @@ class BillboardDataSource extends DataSource {
       FormatUtils.truncate(item.subtitle, 30),
     );
     subtitleText.font = Font.systemFont(sizes.fontSize.secondary);
-    subtitleText.textColor = CONFIG.colors.secondary;
+    subtitleText.textColor = CONFIG.colors.secondaryLabel;
     subtitleText.lineLimit = 1;
 
     if (item.metadata.weeks) {
@@ -101,7 +101,7 @@ class BillboardDataSource extends DataSource {
         FormatUtils.pluralize(item.metadata.weeks, "week"),
       );
       metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-      metaText.textColor = CONFIG.colors.tertiary;
+      metaText.textColor = CONFIG.colors.tertiaryLabel;
     }
 
     itemStack.addSpacer();

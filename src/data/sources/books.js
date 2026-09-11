@@ -81,13 +81,13 @@ class BooksDataSource extends DataSource {
     infoStack.layoutVertically();
 
     const titleText = infoStack.addText(FormatUtils.truncate(data.title, 40));
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 2;
 
     const authorsText = infoStack.addText(data.authors);
     authorsText.font = Font.mediumSystemFont(sizes.fontSize.secondary);
-    authorsText.textColor = CONFIG.colors.secondary;
+    authorsText.textColor = CONFIG.colors.secondaryLabel;
     authorsText.lineLimit = 1;
 
     if (widgetSize !== "small") {
@@ -97,14 +97,14 @@ class BooksDataSource extends DataSource {
         `${data.pageCount} pages · ${data.publisher}, ${data.publishedDate}`,
       );
       detailText.font = Font.systemFont(sizes.fontSize.tertiary);
-      detailText.textColor = CONFIG.colors.tertiary;
+      detailText.textColor = CONFIG.colors.tertiaryLabel;
       detailText.lineLimit = 1;
 
       const metaText = infoStack.addText(
         `${data.categories} · ${data.language}`,
       );
       metaText.font = Font.systemFont(sizes.fontSize.tertiary);
-      metaText.textColor = CONFIG.colors.tertiary;
+      metaText.textColor = CONFIG.colors.tertiaryLabel;
     }
 
     // Small widget: show cover below text

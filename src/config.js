@@ -1,28 +1,87 @@
+// Apple-native semantic palette (HIG). Dynamic pairs adapt to light/dark.
+const label = Color.dynamic(new Color("#000000"), new Color("#FFFFFF"));
+const secondaryLabel = Color.dynamic(
+  new Color("#3C3C43", 0.6),
+  new Color("#EBEBF5", 0.6),
+);
+const tertiaryLabel = Color.dynamic(
+  new Color("#3C3C43", 0.3),
+  new Color("#EBEBF5", 0.3),
+);
+const quaternaryLabel = Color.dynamic(
+  new Color("#3C3C43", 0.18),
+  new Color("#EBEBF5", 0.18),
+);
+
+const COLORS = {
+  // Semantic label hierarchy
+  label,
+  secondaryLabel,
+  tertiaryLabel,
+  quaternaryLabel,
+  separator: Color.dynamic(
+    new Color("#3C3C43", 0.29),
+    new Color("#545458", 0.65),
+  ),
+  fill: Color.dynamic(new Color("#787880", 0.12), new Color("#787880", 0.24)),
+
+  // Accent and status (system colors)
+  accent: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+  warning: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+  new: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+  up: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+  down: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")),
+  unchanged: tertiaryLabel,
+
+  sunset: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+  golden: Color.dynamic(new Color("#FFCC00"), new Color("#FFD60A")),
+  white: Color.white(),
+
+  // Steam status indicators
+  steamStatus: {
+    online: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+    "in-game": Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+    offline: Color.dynamic(new Color("#8E8E93"), new Color("#8E8E93")),
+    private: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+  },
+
+  dhbwTypes: {
+    Vorlesung: Color.dynamic(new Color("#007AFF"), new Color("#0A84FF")),
+    Übung: Color.dynamic(new Color("#34C759"), new Color("#30D158")),
+    Labor: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+    Praktikum: Color.dynamic(new Color("#FF9500"), new Color("#FF9F0A")),
+    Seminar: Color.dynamic(new Color("#AF52DE"), new Color("#BF5AF2")),
+    Tutorium: Color.dynamic(new Color("#5856D6"), new Color("#5E5CE6")),
+    Klausur: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")),
+    Prüfung: Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")),
+  },
+};
+
 const CONFIG = {
   // Default settings
   defaultSource: "billboard",
   apiBaseUrl: "https://api.michi.onl/api",
   apiToken: "", // Set via in-app "API Token" setup UI; stored in Keychain
 
-  // Widget sizing configuration
+  // Widget sizing. Type scale follows SF text styles, compacted for widgets.
   sizing: {
     small: {
       maxItems: 4,
-      fontSize: { primary: 12, secondary: 10, tertiary: 9, caption: 8 },
+      fontSize: { title: 13, primary: 13, secondary: 11, tertiary: 10, caption: 9 },
       iconSize: 14,
-      spacing: 5,
+      spacing: 6,
       padding: 14,
     },
     medium: {
       maxItems: 4,
-      fontSize: { primary: 14, secondary: 12, tertiary: 10, caption: 9 },
+      fontSize: { title: 15, primary: 15, secondary: 13, tertiary: 11, caption: 10 },
       iconSize: 16,
       spacing: 8,
       padding: 16,
     },
     large: {
       maxItems: 12,
-      fontSize: { primary: 16, secondary: 13, tertiary: 11, caption: 10 },
+      fontSize: { title: 17, primary: 17, secondary: 15, tertiary: 13, caption: 11 },
       iconSize: 18,
       spacing: 10,
       padding: 18,
@@ -48,54 +107,12 @@ const CONFIG = {
     },
   },
 
-  // Color scheme following iOS system design
-  colors: {
-    // Dynamic colors that adapt to light/dark mode
-    primary: Color.dynamic(new Color("#000000"), new Color("#FFFFFF")),
-    secondary: Color.dynamic(new Color("#8E8E93"), new Color("#8E8E93")),
-    secondaryBright: Color.dynamic(new Color("#8E8E93"), new Color("#AEAEB2")),
-    tertiary: Color.dynamic(new Color("#C7C7CC"), new Color("#636366")),
+  colors: COLORS,
 
-    // Semantic colors
-    accent: new Color("#007AFF"),
-    warning: new Color("#FF9500"),
-
-    // Status indicators
-    new: new Color("#FF9500"),
-    up: new Color("#34C759"),
-    down: new Color("#FF3B30"),
-    unchanged: Color.dynamic(new Color("#8E8E93"), new Color("#636366")),
-
-    sunset: new Color("#FF6B35"),
-    golden: new Color("#FFD700"),
-    white: Color.white(),
-
-    // Steam status indicators (moved from SteamDataSource.statusColors)
-    steamStatus: {
-      online: new Color("#34C759"),
-      "in-game": new Color("#34C759"),
-      offline: new Color("#8E8E93"),
-      private: new Color("#FF9500"),
-    },
-
-    dhbwTypes: {
-      Vorlesung: new Color("#007AFF"),
-      Übung: new Color("#34C759"),
-      Labor: new Color("#FF9500"),
-      Praktikum: new Color("#FF9500"),
-      Seminar: new Color("#AF52DE"),
-      Tutorium: new Color("#5856D6"),
-      Klausur: new Color("#FF3B30"),
-      Prüfung: new Color("#FF3B30"),
-    },
-  },
-
-  // Shared design tokens for badges, radii, and spacing
+  // Concentric radius system + shared spacing
   designTokens: {
-    // badge radius set generously above half the tallest badge's height so it
-    // always renders as a fully rounded pill, not a rounded rectangle
-    cornerRadius: { badge: 8, icon: 3, cover: 6 },
-    badge: { paddingV: 3, paddingH: 7 },
+    cornerRadius: { badge: 6, control: 10, card: 12, icon: 4, cover: 8 },
+    badge: { paddingV: 3, paddingH: 8 },
     compactSpacing: 4,
   },
 

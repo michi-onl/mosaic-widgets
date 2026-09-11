@@ -143,7 +143,7 @@ class AstronomyDataSource extends DataSource {
 
     const sunriseText = row.addText(FormatUtils.formatTime(data.sunrise));
     sunriseText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-    sunriseText.textColor = CONFIG.colors.primary;
+    sunriseText.textColor = CONFIG.colors.label;
 
     row.addSpacer(sizes.spacing * 2);
 
@@ -154,7 +154,7 @@ class AstronomyDataSource extends DataSource {
 
     const sunsetText = row.addText(FormatUtils.formatTime(data.sunset));
     sunsetText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-    sunsetText.textColor = CONFIG.colors.primary;
+    sunsetText.textColor = CONFIG.colors.label;
   }
 
   renderMoonRow(stack, data, sizes) {
@@ -165,18 +165,18 @@ class AstronomyDataSource extends DataSource {
     const moonInfo = this.getMoonPhaseInfo(data.moonPhase);
     const moonIcon = row.addImage(SFSymbol.named(moonInfo.icon).image);
     moonIcon.imageSize = new Size(sizes.iconSize, sizes.iconSize);
-    moonIcon.tintColor = CONFIG.colors.primary;
+    moonIcon.tintColor = CONFIG.colors.label;
     row.addSpacer(CONFIG.designTokens.compactSpacing);
 
     const moonText = row.addText(moonInfo.name);
     moonText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-    moonText.textColor = CONFIG.colors.primary;
+    moonText.textColor = CONFIG.colors.label;
 
     row.addSpacer(sizes.spacing);
 
     const pctText = row.addText(`${Math.round(data.moonPhase * 100)}%`);
     pctText.font = Font.systemFont(sizes.fontSize.tertiary);
-    pctText.textColor = CONFIG.colors.secondary;
+    pctText.textColor = CONFIG.colors.secondaryLabel;
   }
 
   renderUvRow(stack, data, sizes) {
@@ -191,7 +191,7 @@ class AstronomyDataSource extends DataSource {
 
     const label = row.addText("UV Index");
     label.font = Font.systemFont(sizes.fontSize.secondary);
-    label.textColor = CONFIG.colors.secondary;
+    label.textColor = CONFIG.colors.secondaryLabel;
     row.addSpacer(sizes.spacing);
 
     const uvValue = Math.round(data.uvIndex);
@@ -221,7 +221,7 @@ class AstronomyDataSource extends DataSource {
 
     const text = row.addText(`↑ ${morningText}  ↓ ${eveningText}`);
     text.font = Font.systemFont(sizes.fontSize.secondary);
-    text.textColor = CONFIG.colors.primary;
+    text.textColor = CONFIG.colors.label;
   }
 
   renderTemperatureRow(stack, data, sizes) {
@@ -238,7 +238,7 @@ class AstronomyDataSource extends DataSource {
 
     const tempText = row.addText(`${Math.round(data.temperature)}°C`);
     tempText.font = Font.mediumSystemFont(sizes.fontSize.primary);
-    tempText.textColor = CONFIG.colors.primary;
+    tempText.textColor = CONFIG.colors.label;
   }
 }
 

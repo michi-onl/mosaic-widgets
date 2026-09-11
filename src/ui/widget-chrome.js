@@ -1,4 +1,5 @@
 const { CONFIG } = require("../config.js");
+const { addSeparator, typography } = require("../design-system.js");
 
 const ERROR_ICON_SIZES = { small: 24, medium: 32, large: 40 };
 
@@ -38,16 +39,16 @@ function createErrorWidget(message, widgetSize = "medium", sourceName = "Widget"
   stack.addSpacer(sizes.spacing);
 
   const errorText = stack.addText(`${sourceName} ${classifyError(message)}`);
-  errorText.font = Font.boldSystemFont(sizes.fontSize.primary);
-  errorText.textColor = CONFIG.colors.primary;
+  errorText.font = typography.title(sizes);
+  errorText.textColor = CONFIG.colors.label;
   errorText.centerAlignText();
 
   if (widgetSize !== "small") {
     stack.addSpacer(CONFIG.designTokens.compactSpacing);
 
     const messageText = stack.addText(message);
-    messageText.font = Font.systemFont(sizes.fontSize.tertiary);
-    messageText.textColor = CONFIG.colors.secondary;
+    messageText.font = typography.footnote(sizes);
+    messageText.textColor = CONFIG.colors.secondaryLabel;
     messageText.centerAlignText();
   }
 
@@ -58,8 +59,8 @@ function createErrorWidget(message, widgetSize = "medium", sourceName = "Widget"
   );
 
   const hintText = stack.addText(CONFIG.messages.tapRetry);
-  hintText.font = Font.systemFont(sizes.fontSize.tertiary);
-  hintText.textColor = CONFIG.colors.tertiary;
+  hintText.font = typography.footnote(sizes);
+  hintText.textColor = CONFIG.colors.tertiaryLabel;
   hintText.centerAlignText();
 
   return widget;
@@ -68,10 +69,7 @@ function createErrorWidget(message, widgetSize = "medium", sourceName = "Widget"
 function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
   widget.addSpacer();
 
-  // Hairline separator
-  const sep = widget.addStack();
-  sep.size = new Size(0, 0.5);
-  sep.backgroundColor = CONFIG.colors.tertiary;
+  addSeparator(widget);
   widget.addSpacer(CONFIG.designTokens.compactSpacing);
 
   const footer = widget.addStack();
@@ -85,8 +83,8 @@ function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
   const timeString = `${prefix}${hours}:${minutes}`;
 
   const timeText = footer.addText(timeString);
-  timeText.font = Font.systemFont(sizes.fontSize.caption);
-  timeText.textColor = CONFIG.colors.tertiary;
+  timeText.font = typography.caption(sizes);
+  timeText.textColor = CONFIG.colors.tertiaryLabel;
 
   if (usingCache && widgetSize !== "small") {
     footer.addSpacer();
@@ -101,7 +99,7 @@ function addFooter(widget, sizes, usingCache = false, widgetSize = "large") {
     if (widgetSize === "large") {
       footer.addSpacer(CONFIG.designTokens.compactSpacing);
       const offlineText = footer.addText(CONFIG.messages.offline);
-      offlineText.font = Font.systemFont(sizes.fontSize.caption);
+      offlineText.font = typography.caption(sizes);
       offlineText.textColor = CONFIG.colors.warning;
     }
   }

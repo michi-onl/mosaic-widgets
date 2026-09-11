@@ -138,7 +138,7 @@ class StatusBoardDataSource extends DataSource {
     if (source.error) {
       const errorText = row.addText(source.config?.name || source.name);
       errorText.font = Font.systemFont(sizes.fontSize.secondary);
-      errorText.textColor = CONFIG.colors.tertiary;
+      errorText.textColor = CONFIG.colors.tertiaryLabel;
     } else if (source.topItem) {
       const textStack = row.addStack();
       textStack.layoutVertically();
@@ -146,15 +146,15 @@ class StatusBoardDataSource extends DataSource {
       const itemText = textStack.addText(
         FormatUtils.truncate(source.topItem, widgetSize === "small" ? 30 : 60),
       );
-      itemText.font = Font.boldSystemFont(sizes.fontSize.primary);
-      itemText.textColor = CONFIG.colors.primary;
+      itemText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+      itemText.textColor = CONFIG.colors.label;
       itemText.lineLimit = 1;
     } else {
       const emptyText = row.addText(
         `${source.config?.name || source.name} — no data`,
       );
       emptyText.font = Font.systemFont(sizes.fontSize.secondary);
-      emptyText.textColor = CONFIG.colors.tertiary;
+      emptyText.textColor = CONFIG.colors.tertiaryLabel;
     }
   }
 }

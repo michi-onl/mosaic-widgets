@@ -74,13 +74,13 @@ class TimelineDataSource extends DataSource {
     textStack.layoutVertically();
 
     const titleText = textStack.addText(event.title);
-    titleText.font = Font.boldSystemFont(sizes.fontSize.primary);
-    titleText.textColor = CONFIG.colors.primary;
+    titleText.font = Font.semiboldSystemFont(sizes.fontSize.primary);
+    titleText.textColor = CONFIG.colors.label;
     titleText.lineLimit = 2;
 
     const timeText = textStack.addText(FormatUtils.formatTimeAgo(event.date));
     timeText.font = Font.systemFont(sizes.fontSize.tertiary);
-    timeText.textColor = CONFIG.colors.secondary;
+    timeText.textColor = CONFIG.colors.secondaryLabel;
 
     itemStack.addSpacer();
   }
