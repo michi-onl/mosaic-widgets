@@ -69,7 +69,7 @@ Structural defaults only: endpoints, icons, refresh intervals, sizing constants,
 
 ## Design Conventions
 
-Design system v2 is Apple-native / SF-clean; the spec is `docs/design-system-v2.md` (local, gitignored). Tokens live in `CONFIG.colors`, `CONFIG.sizing.<family>.fontSize`, `CONFIG.images`, and `CONFIG.designTokens`.
+Design system v2 is Apple-native / SF-clean; the spec is `design-system.md`. Tokens live in `CONFIG.colors`, `CONFIG.sizing.<family>.fontSize`, `CONFIG.images`, and `CONFIG.designTokens`.
 
 - **Semantic colors only**: `CONFIG.colors.label` / `secondaryLabel` / `tertiaryLabel` / `quaternaryLabel`, `separator`, `fill`, plus `accent` (systemBlue) and status colors. Color is identity/status, never decoration.
 - **Typography via helpers**: use `typography.title/body/footnote/caption(sizes)` from `src/design-system.js` rather than calling `Font.*` with a hardcoded weight. Titles are semibold, not bold.
